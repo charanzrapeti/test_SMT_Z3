@@ -1,6 +1,7 @@
 import json
 import copy
 import re
+import random
 
 def fix_can_run_on(input_path, output_path):
     with open(input_path, "r") as f:
@@ -33,7 +34,7 @@ def fix_can_run_on(input_path, output_path):
                 f"Not enough non-router nodes to replace routers in job {job['id']}"
             )
 
-        replacements = available_candidates[:removed_count]
+        replacements = random.sample(available_candidates, removed_count)
         final_list = sorted(filtered + replacements)
 
         if len(final_list) != original_size:
@@ -63,4 +64,4 @@ def fix_can_run_on(input_path, output_path):
 
 
 if __name__ == "__main__":
-    fix_can_run_on("example_100T.json", "example_100T_fixed.json")
+    fix_can_run_on("example_15T.json", "example_15T_fixed.json")

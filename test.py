@@ -4,7 +4,7 @@ from z3 import *
 # -------------------------
 # Load JSON
 # -------------------------
-with open("example_30T_fixed.json", "r") as f:
+with open("example_15T_fixed.json", "r") as f:
     data = json.load(f)
 
 jobs = data["application"]["jobs"]
@@ -140,7 +140,7 @@ if solver.check() == sat:
 
         output_schedule["nodes"] = all_nodes_list
 
-    with open("schedule_output.json", "w") as f:
+    with open("schedule_output15T.json", "w") as f:
         json.dump(output_schedule, f, indent=4)
 
     print("Feasible schedule found. Output written to schedule_output.json")
