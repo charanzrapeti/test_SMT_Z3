@@ -24,6 +24,32 @@ n = len(jobs)
 node_id_to_index = {nid: idx for idx, nid in enumerate(compute_nodes)}
 index_to_node_id = {idx: nid for nid, idx in node_id_to_index.items()}
 
+# ------ visualization purpose only
+# -------------------------
+# Build dependency map
+# -------------------------
+# job_id -> list of dependency job_ids
+dependencies = {job["id"]: [] for job in jobs}
+
+for msg in messages:
+    sender = msg["sender"]
+    receiver = msg["receiver"]
+
+    if receiver in dependencies:
+        dependencies[receiver].append(sender)
+
+all_nodes_set = set()
+
+for job in jobs:
+        for nid in job["can_run_on"]:
+            all_nodes_set.add(nid)
+
+all_nodes_list = sorted(list(all_nodes_set))
+
+
+
+#-------------------------------------------
+
 # -------------------------
 # Create solver
 # -------------------------
@@ -108,8 +134,11 @@ if solver.check() == sat:
             "assigned_node": assigned_real_node,
             "start_time": start_time,
             "wcet_fullspeed": wcet,
-            "finish_time": finish_time
+            "finish_time": finish_time,
+            "dependencies": dependencies[i]
         })
+
+        output_schedule["nodes"] = all_nodes_list
 
     with open("schedule_output.json", "w") as f:
         json.dump(output_schedule, f, indent=4)
