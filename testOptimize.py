@@ -207,14 +207,14 @@ def solve_with_objective(objective_name):
 
             output_schedule["schedule"].append({
                 "job_id": i,
-                "assigned_node": assigned_real_node,
+                "assigned_node": f"p{assigned_real_node}",
                 "start_time": start_time,
                 "wcet_fullspeed": wcet,
                 "finish_time": finish_time,
                 "dependencies": dependencies[i]
             })
 
-        output_schedule["nodes"] = all_nodes_list
+        output_schedule["nodes"] = [f"p{nid}" for nid in all_nodes_list]
 
         filename = f"schedule_{objective_name}_30T.json"
 
