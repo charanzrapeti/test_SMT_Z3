@@ -1,3 +1,4 @@
+import argparse
 import json
 from z3 import *
 from util.KPathFinding2 import compute_k_paths
@@ -5,7 +6,18 @@ from util.KPathFinding2 import compute_k_paths
 # =============================================================================
 # LOAD INPUT DATA
 # =============================================================================
-input_file = "input/graph_0.json"
+parser = argparse.ArgumentParser(
+    description="Find a feasible/optimal SMT schedule for one input JSON."
+)
+parser.add_argument(
+    "input_file",
+    nargs="?",
+    default="input/graph_0.json",
+    help="Input JSON file. Defaults to input/graph_0.json.",
+)
+args = parser.parse_args()
+
+input_file = args.input_file
 with open(input_file, "r") as f:
     data = json.load(f)
 

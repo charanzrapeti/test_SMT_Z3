@@ -1,9 +1,21 @@
+import argparse
 import json
 from z3 import *
 from util.KPathFinding2 import compute_k_paths
 
 # ── module-level setup (safe to run in workers too) ──
-input_file = "input/graph_1.json"
+parser = argparse.ArgumentParser(
+    description="Find an SMT schedule using the hop-time routing model."
+)
+parser.add_argument(
+    "input_file",
+    nargs="?",
+    default="input/graph_1.json",
+    help="Input JSON file. Defaults to input/graph_1.json.",
+)
+args = parser.parse_args()
+
+input_file = args.input_file
 with open(input_file, "r") as f:
     data = json.load(f)
 
