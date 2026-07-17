@@ -3,6 +3,11 @@ import random
 from pathlib import Path
 
 
+def load_json(path):
+    with open(path, "r") as f:
+        return json.load(f)
+
+
 def generate_context(
     total_events=10,
     proc_failures=7,
@@ -92,8 +97,13 @@ def generate_context(
 
         elif event_type == "slack_event":
 
-            node_id = random.choice(slack_event_nodes)
-            slack_event_nodes.remove(node_id)
+            base_input = load_json("input/graph_1 - input.json")
+
+            jobs = base_input["application"]["jobs"]
+
+            job = random.choice(jobs)
+
+            job_id = job["id"]
 
             # Execution time (seconds)
             et = round(random.uniform(0.5, 10.0), 3)
@@ -102,13 +112,16 @@ def generate_context(
             "event_id": event_id,
             "event_type": event_type,
             "event_time": random.randint(0, 100),
-            "node_id": node_id,
             "ET": et,
             "event_input": f"event_{event_id}_input.json",
             "event_schedule": f"schedule_{event_id}.json",
             "pred_event_id": None,
         }
-
+        if event_type == "slack_event":
+            event["job_id"] = job_id
+        else:
+            event["node_id"] = node_id
+        print(event)
         if event_id > 0:
             event["pred_event_id"] = random.randint(0, event_id - 1)
 
@@ -139,7 +152,7 @@ if __name__ == "__main__":
         slack_events=2,
 
         proc_failure_nodes=[
-          
+
             "1",
             "2",
             "3",
@@ -155,7 +168,7 @@ if __name__ == "__main__":
         ],
 
         slack_event_nodes=[
-             "1",
+            "1",
             "2",
             "3",
             "11",
