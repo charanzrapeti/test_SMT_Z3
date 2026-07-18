@@ -94,8 +94,88 @@ def process_rout_failure(event, base_input_data):
     return event
 
 
+def process_slack_event(event, base_input_data):
+    """
+    Process a Slack Event.
+
+    The affected job is assumed to finish in 60% of its WCET.
+
+    A new scheduler input JSON is generated and the SMT scheduler
+    is executed to produce a new schedule.
+    """
+
+    job_id = int(event["job_id"])
+
+    stem = event_file_stem(event)
+
+    input_name = f"{stem}_input.json"
+    schedule_name = f"{stem}_schedule.json"
+
+    event_input_path = EVENT_INPUT_DIR / input_name
+    event_schedule_path = EVENT_SCHEDULE_DIR / schedule_name
+
+    updated_input = copy.deepcopy(base_input_data)
+
+    found = False
+
+    for job in updated_input["application"]["jobs"]:
+
+        if job["id"] == job_id:
+
+            found = True
+
+            wcet = job["wcet_fullspeed"]
+
+            actual_execution = int(wcet * 0.60)
+
+            slack = wcet - actual_execution
+
+            job["wcet_fullspeed"] = actual_execution
+            job["original_wcet"] = wcet
+            job["actual_execution"] = actual_execution
+            job["slack"] = slack
+
+            break
+
+    if not found:
+        raise ValueError(f"Job {job_id} not found.")
+
+    #
+    # Save new scheduler input
+    #
+    save_json(event_input_path, updated_input)
+
+    #
+    # Run scheduler
+    #
+    sat, result = run_scheduler(
+        event_input_path,
+        event_schedule_path,
+    )
+
+    event["event_input"] = input_name
+    event["event_schedule"] = schedule_name
+    event["SAT"] = sat
+
+    if sat:
+
+        event["original_wcet"] = wcet
+        event["actual_execution"] = actual_execution
+        event["slack"] = slack
+
+    else:
+
+        event["scheduler_returncode"] = result.returncode
+
+        if result.stderr:
+            event["scheduler_error"] = result.stderr.strip()
+
+    return event
+
+
 EVENT_PROCESSORS = {
     "rout_failure": process_rout_failure,
+    "slack_event": process_slack_event,
 }
 
 
