@@ -3,6 +3,11 @@ import random
 from pathlib import Path
 
 
+def load_json(path):
+    with open(path, "r") as f:
+        return json.load(f)
+
+
 def generate_context(
     total_events=10,
     proc_failures=7,
