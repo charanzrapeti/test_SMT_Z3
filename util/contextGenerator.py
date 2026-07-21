@@ -101,7 +101,7 @@ def generate_context(
         event = {
             "event_id": event_id,
             "event_type": event_type,
-            "event_time": random.randint(0, 100),
+            "event_time": random.randint(0, 100), # update this to be more realistic if needed , #randomGenertor for slackpercentage.
             "node_id": node_id,
             "ET": et,
             "event_input": f"event_{event_id}_input.json",
