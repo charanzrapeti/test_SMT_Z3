@@ -6,7 +6,7 @@ from z3 import *
 from util.KPathFinding2 import compute_k_paths
 
 # ── module-level setup (safe to run in workers too) ──
-DEFAULT_INPUT_FILE = "input/graph_2.json"
+DEFAULT_INPUT_FILE = "input/graph_0.json"
 
 
 def load_input(input_path):
@@ -803,7 +803,7 @@ if __name__ == "__main__":
     optimal_T     = None
 
     print(f"Search range: T = {low} to {high}")
-    NUM_WORKERS = 1
+    NUM_WORKERS = 8
 
     while low <= high:
         mid = (low + high) // 2

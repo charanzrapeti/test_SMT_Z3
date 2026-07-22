@@ -23,8 +23,8 @@
             {
                 "job_id": 2,
                 "assigned_node": 16,
-                "start_time": 7,
-                "finish_time": 9,
+                "start_time": 8,
+                "finish_time": 10,
                 "wcet": 2,
                 "dependencies": [
                     0
@@ -97,9 +97,9 @@
             },
             {
                 "job_id": 9,
-                "assigned_node": 11,
-                "start_time": 47,
-                "finish_time": 50,
+                "assigned_node": 15,
+                "start_time": 46,
+                "finish_time": 49,
                 "wcet": 3,
                 "dependencies": [
                     8
@@ -107,9 +107,9 @@
             },
             {
                 "job_id": 10,
-                "assigned_node": 11,
-                "start_time": 44,
-                "finish_time": 47,
+                "assigned_node": 1,
+                "start_time": 43,
+                "finish_time": 46,
                 "wcet": 3,
                 "dependencies": [
                     7,
@@ -118,7 +118,7 @@
             },
             {
                 "job_id": 11,
-                "assigned_node": 11,
+                "assigned_node": 15,
                 "start_time": 50,
                 "finish_time": 54,
                 "wcet": 4,
@@ -136,34 +136,6 @@
                 "receiver_job": 1,
                 "sender_node": 2,
                 "receiver_node": 3,
-                "inject_timeframe": 4,
-                "arrive_timeframe": 7,
-                "path_choice": 1,
-                "hop_times": [
-                    {
-                        "node": 2,
-                        "timeframe": 4
-                    },
-                    {
-                        "node": 5,
-                        "timeframe": 5
-                    },
-                    {
-                        "node": 6,
-                        "timeframe": 6
-                    },
-                    {
-                        "node": 3,
-                        "timeframe": 7
-                    }
-                ]
-            },
-            {
-                "msg_id": 1,
-                "sender_job": 0,
-                "receiver_job": 2,
-                "sender_node": 2,
-                "receiver_node": 16,
                 "inject_timeframe": 3,
                 "arrive_timeframe": 7,
                 "path_choice": 1,
@@ -177,16 +149,44 @@
                         "timeframe": 4
                     },
                     {
-                        "node": 9,
+                        "node": 6,
                         "timeframe": 5
                     },
                     {
-                        "node": 13,
+                        "node": 3,
+                        "timeframe": 7
+                    }
+                ]
+            },
+            {
+                "msg_id": 1,
+                "sender_job": 0,
+                "receiver_job": 2,
+                "sender_node": 2,
+                "receiver_node": 16,
+                "inject_timeframe": 4,
+                "arrive_timeframe": 8,
+                "path_choice": 1,
+                "hop_times": [
+                    {
+                        "node": 2,
+                        "timeframe": 4
+                    },
+                    {
+                        "node": 5,
+                        "timeframe": 5
+                    },
+                    {
+                        "node": 9,
                         "timeframe": 6
                     },
                     {
-                        "node": 16,
+                        "node": 13,
                         "timeframe": 7
+                    },
+                    {
+                        "node": 16,
+                        "timeframe": 8
                     }
                 ]
             },
@@ -232,29 +232,29 @@
                 "receiver_job": 3,
                 "sender_node": 16,
                 "receiver_node": 7,
-                "inject_timeframe": 9,
-                "arrive_timeframe": 13,
+                "inject_timeframe": 10,
+                "arrive_timeframe": 14,
                 "path_choice": 0,
                 "hop_times": [
                     {
                         "node": 16,
-                        "timeframe": 9
-                    },
-                    {
-                        "node": 13,
                         "timeframe": 10
                     },
                     {
-                        "node": 9,
+                        "node": 13,
                         "timeframe": 11
                     },
                     {
-                        "node": 8,
+                        "node": 9,
                         "timeframe": 12
                     },
                     {
-                        "node": 7,
+                        "node": 8,
                         "timeframe": 13
+                    },
+                    {
+                        "node": 7,
+                        "timeframe": 14
                     }
                 ]
             },
@@ -264,33 +264,33 @@
                 "receiver_job": 4,
                 "sender_node": 16,
                 "receiver_node": 1,
-                "inject_timeframe": 10,
-                "arrive_timeframe": 15,
+                "inject_timeframe": 11,
+                "arrive_timeframe": 16,
                 "path_choice": 0,
                 "hop_times": [
                     {
                         "node": 16,
-                        "timeframe": 10
-                    },
-                    {
-                        "node": 13,
                         "timeframe": 11
                     },
                     {
-                        "node": 9,
+                        "node": 13,
                         "timeframe": 12
                     },
                     {
-                        "node": 5,
+                        "node": 9,
                         "timeframe": 13
                     },
                     {
-                        "node": 4,
+                        "node": 5,
                         "timeframe": 14
                     },
                     {
-                        "node": 1,
+                        "node": 4,
                         "timeframe": 15
+                    },
+                    {
+                        "node": 1,
+                        "timeframe": 16
                     }
                 ]
             },
@@ -328,29 +328,29 @@
                 "receiver_job": 4,
                 "sender_node": 3,
                 "receiver_node": 1,
-                "inject_timeframe": 12,
-                "arrive_timeframe": 21,
+                "inject_timeframe": 11,
+                "arrive_timeframe": 15,
                 "path_choice": 0,
                 "hop_times": [
                     {
                         "node": 3,
-                        "timeframe": 12
+                        "timeframe": 11
                     },
                     {
                         "node": 6,
-                        "timeframe": 13
+                        "timeframe": 12
                     },
                     {
                         "node": 5,
-                        "timeframe": 14
+                        "timeframe": 13
                     },
                     {
                         "node": 4,
-                        "timeframe": 15
+                        "timeframe": 14
                     },
                     {
                         "node": 1,
-                        "timeframe": 21
+                        "timeframe": 15
                     }
                 ]
             },
@@ -448,29 +448,29 @@
                 "receiver_job": 7,
                 "sender_node": 7,
                 "receiver_node": 2,
-                "inject_timeframe": 31,
-                "arrive_timeframe": 35,
+                "inject_timeframe": 20,
+                "arrive_timeframe": 27,
                 "path_choice": 0,
                 "hop_times": [
                     {
                         "node": 7,
-                        "timeframe": 31
+                        "timeframe": 20
                     },
                     {
                         "node": 8,
-                        "timeframe": 32
+                        "timeframe": 21
                     },
                     {
                         "node": 4,
-                        "timeframe": 33
+                        "timeframe": 22
                     },
                     {
                         "node": 5,
-                        "timeframe": 34
+                        "timeframe": 23
                     },
                     {
                         "node": 2,
-                        "timeframe": 35
+                        "timeframe": 27
                     }
                 ]
             },
@@ -527,10 +527,10 @@
                 "sender_job": 8,
                 "receiver_job": 9,
                 "sender_node": 2,
-                "receiver_node": 11,
+                "receiver_node": 15,
                 "inject_timeframe": 41,
                 "arrive_timeframe": 46,
-                "path_choice": 0,
+                "path_choice": 1,
                 "hop_times": [
                     {
                         "node": 2,
@@ -541,15 +541,19 @@
                         "timeframe": 42
                     },
                     {
-                        "node": 6,
+                        "node": 4,
                         "timeframe": 43
                     },
                     {
-                        "node": 10,
+                        "node": 8,
+                        "timeframe": 44
+                    },
+                    {
+                        "node": 12,
                         "timeframe": 45
                     },
                     {
-                        "node": 11,
+                        "node": 15,
                         "timeframe": 46
                     }
                 ]
@@ -559,10 +563,10 @@
                 "sender_job": 8,
                 "receiver_job": 10,
                 "sender_node": 2,
-                "receiver_node": 11,
+                "receiver_node": 1,
                 "inject_timeframe": 40,
-                "arrive_timeframe": 44,
-                "path_choice": 1,
+                "arrive_timeframe": 43,
+                "path_choice": 0,
                 "hop_times": [
                     {
                         "node": 2,
@@ -573,16 +577,12 @@
                         "timeframe": 41
                     },
                     {
-                        "node": 6,
+                        "node": 4,
                         "timeframe": 42
                     },
                     {
-                        "node": 10,
+                        "node": 1,
                         "timeframe": 43
-                    },
-                    {
-                        "node": 11,
-                        "timeframe": 44
                     }
                 ]
             },
@@ -591,10 +591,10 @@
                 "sender_job": 7,
                 "receiver_job": 10,
                 "sender_node": 2,
-                "receiver_node": 11,
+                "receiver_node": 1,
                 "inject_timeframe": 39,
-                "arrive_timeframe": 43,
-                "path_choice": 1,
+                "arrive_timeframe": 42,
+                "path_choice": 0,
                 "hop_times": [
                     {
                         "node": 2,
@@ -605,16 +605,12 @@
                         "timeframe": 40
                     },
                     {
-                        "node": 6,
+                        "node": 4,
                         "timeframe": 41
                     },
                     {
-                        "node": 10,
+                        "node": 1,
                         "timeframe": 42
-                    },
-                    {
-                        "node": 11,
-                        "timeframe": 43
                     }
                 ]
             },
@@ -622,15 +618,15 @@
                 "msg_id": 16,
                 "sender_job": 9,
                 "receiver_job": 11,
-                "sender_node": 11,
-                "receiver_node": 11,
-                "inject_timeframe": 50,
-                "arrive_timeframe": 50,
-                "path_choice": 0,
+                "sender_node": 15,
+                "receiver_node": 15,
+                "inject_timeframe": 49,
+                "arrive_timeframe": 49,
+                "path_choice": 4,
                 "hop_times": [
                     {
-                        "node": 11,
-                        "timeframe": 50
+                        "node": 15,
+                        "timeframe": 49
                     }
                 ]
             },
@@ -639,10 +635,10 @@
                 "sender_job": 6,
                 "receiver_job": 11,
                 "sender_node": 3,
-                "receiver_node": 11,
+                "receiver_node": 15,
                 "inject_timeframe": 35,
-                "arrive_timeframe": 42,
-                "path_choice": 0,
+                "arrive_timeframe": 48,
+                "path_choice": 1,
                 "hop_times": [
                     {
                         "node": 3,
@@ -653,12 +649,24 @@
                         "timeframe": 36
                     },
                     {
-                        "node": 10,
-                        "timeframe": 37
+                        "node": 5,
+                        "timeframe": 43
                     },
                     {
-                        "node": 11,
-                        "timeframe": 42
+                        "node": 4,
+                        "timeframe": 44
+                    },
+                    {
+                        "node": 8,
+                        "timeframe": 46
+                    },
+                    {
+                        "node": 12,
+                        "timeframe": 47
+                    },
+                    {
+                        "node": 15,
+                        "timeframe": 48
                     }
                 ]
             },
@@ -666,15 +674,31 @@
                 "msg_id": 18,
                 "sender_job": 10,
                 "receiver_job": 11,
-                "sender_node": 11,
-                "receiver_node": 11,
-                "inject_timeframe": 47,
-                "arrive_timeframe": 47,
-                "path_choice": 3,
+                "sender_node": 1,
+                "receiver_node": 15,
+                "inject_timeframe": 46,
+                "arrive_timeframe": 50,
+                "path_choice": 1,
                 "hop_times": [
                     {
-                        "node": 11,
+                        "node": 1,
+                        "timeframe": 46
+                    },
+                    {
+                        "node": 4,
                         "timeframe": 47
+                    },
+                    {
+                        "node": 8,
+                        "timeframe": 48
+                    },
+                    {
+                        "node": 12,
+                        "timeframe": 49
+                    },
+                    {
+                        "node": 15,
+                        "timeframe": 50
                     }
                 ]
             }
