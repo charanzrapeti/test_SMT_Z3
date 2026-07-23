@@ -1,0 +1,80 @@
+Scheduler steps:
+[x] Load input and compute routing paths   0.00% deadline=750, jobs=20, messages=25, search_space=245
+[ ] Check candidate makespan block   3.27% candidates_checked=8, candidate_comparisons_left~=237, block=[624, 625, 626, 627, 628, 629, 630, 631]
+
+Candidate T=624: building SMT model
+[x] Create solver variables  10.00% jobs=20, messages=25, nodes=17
+[x] Add job domain constraints  20.00% constraints=60
+[x] Add CPU mutual-exclusion comparisons  35.00% comparisons=190/190
+[x] Build message routing constraints  55.00% messages=25, route_options=79, route_cases=79, hop_vars=278
+[x] Add wire-contention comparisons  70.00% comparisons=1999/1999
+[x] Add node-contention comparisons  85.00% comparisons=3621/3621
+[ ] Run Z3 solver check  90.00%
+[x] Run Z3 solver check 100.00% result=sat, solve_seconds=0.839, candidate_seconds=1.530
+
+Candidate T=625: building SMT model
+[x] Create solver variables  10.00% jobs=20, messages=25, nodes=17
+[x] Add job domain constraints  20.00% constraints=60
+[x] Add CPU mutual-exclusion comparisons  35.00% comparisons=190/190
+[x] Build message routing constraints  55.00% messages=25, route_options=79, route_cases=79, hop_vars=278
+[x] Add wire-contention comparisons  70.00% comparisons=1999/1999
+[x] Add node-contention comparisons  85.00% comparisons=3621/3621
+[ ] Run Z3 solver check  90.00%
+[x] Run Z3 solver check 100.00% result=sat, solve_seconds=1.070, candidate_seconds=1.745
+
+Candidate T=626: building SMT model
+[x] Create solver variables  10.00% jobs=20, messages=25, nodes=17
+[x] Add job domain constraints  20.00% constraints=60
+[x] Add CPU mutual-exclusion comparisons  35.00% comparisons=190/190
+[x] Build message routing constraints  55.00% messages=25, route_options=79, route_cases=79, hop_vars=278
+[x] Add wire-contention comparisons  70.00% comparisons=1999/1999
+[x] Add node-contention comparisons  85.00% comparisons=3621/3621
+[ ] Run Z3 solver check  90.00%
+[x] Run Z3 solver check 100.00% result=sat, solve_seconds=1.217, candidate_seconds=1.929
+
+Candidate T=627: building SMT model
+[x] Create solver variables  10.00% jobs=20, messages=25, nodes=17
+[x] Add job domain constraints  20.00% constraints=60
+[x] Add CPU mutual-exclusion comparisons  35.00% comparisons=190/190
+[x] Build message routing constraints  55.00% messages=25, route_options=79, route_cases=79, hop_vars=278
+[x] Add wire-contention comparisons  70.00% comparisons=1999/1999
+[x] Add node-contention comparisons  85.00% comparisons=3621/3621
+[ ] Run Z3 solver check  90.00%
+[x] Run Z3 solver check 100.00% result=sat, solve_seconds=1.676, candidate_seconds=2.356
+
+Candidate T=628: building SMT model
+[x] Create solver variables  10.00% jobs=20, messages=25, nodes=17
+[x] Add job domain constraints  20.00% constraints=60
+[x] Add CPU mutual-exclusion comparisons  35.00% comparisons=190/190
+[x] Build message routing constraints  55.00% messages=25, route_options=79, route_cases=79, hop_vars=278
+[x] Add wire-contention comparisons  70.00% comparisons=1999/1999
+[x] Add node-contention comparisons  85.00% comparisons=3621/3621
+[ ] Run Z3 solver check  90.00%
+[x] Run Z3 solver check 100.00% result=sat, solve_seconds=1.074, candidate_seconds=1.752
+
+Candidate T=629: building SMT model
+[x] Create solver variables  10.00% jobs=20, messages=25, nodes=17
+[x] Add job domain constraints  20.00% constraints=60
+[x] Add CPU mutual-exclusion comparisons  35.00% comparisons=190/190
+[x] Build message routing constraints  55.00% messages=25, route_options=79, route_cases=79, hop_vars=278
+[x] Add wire-contention comparisons  70.00% comparisons=1999/1999
+[x] Add node-contention comparisons  85.00% comparisons=3621/3621
+[ ] Run Z3 solver check  90.00%
+[x] Run Z3 solver check 100.00% result=sat, solve_seconds=1.448, candidate_seconds=2.126
+
+Candidate T=630: building SMT model
+[x] Create solver variables  10.00% jobs=20, messages=25, nodes=17
+[x] Add job domain constraints  20.00% constraints=60
+[x] Add CPU mutual-exclusion comparisons  35.00% comparisons=190/190
+[x] Build message routing constraints  55.00% messages=25, route_options=79, route_cases=79, hop_vars=278
+[x] Add wire-contention comparisons  70.00% comparisons=1999/1999
+[x] Add node-contention comparisons  85.00% comparisons=3621/3621
+[ ] Run Z3 solver check  90.00%
+[x] Run Z3 solver check 100.00% result=unknown, solve_seconds=1.343, candidate_seconds=2.023
+
+Candidate T=631: building SMT model
+[x] Create solver variables  10.00% jobs=20, messages=25, nodes=17
+[x] Add job domain constraints  20.00% constraints=60
+[x] Add CPU mutual-exclusion comparisons  35.00% comparisons=190/190
+[x] Build message routing constraints  55.00% messages=25, route_options=79, route_cases=79, hop_vars=278
+[x] Add wire-contention comparisons  70.00% comparisons=1999/1999
