@@ -43,3 +43,7 @@ To generate new input files, follow these steps:
 
 3. **Run the Scheduler**:
    - Once the files are in the `input/` folder, follow the steps provided in **Option 1**.
+
+
+   ** Tests ** : 
+   - Baseline result: the current scheduler reaches 38 independent jobs in under 5 minutes, then times out at 41. With messages added after that, 38 tasks/9 messages still schedules

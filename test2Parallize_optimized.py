@@ -51,6 +51,7 @@ for ni in range(num_nodes):
 path_data = compute_k_paths(input_file, k=1)
 num_jobs  = len(jobs_data)
 num_msgs  = len(messages_data)
+ROUTING_OPTIONS_CACHE = {}
 
 
 class VerboseProgress:
@@ -154,7 +155,18 @@ def compute_lmin(jobs_data, messages_data):
                max(job_wcet[jid] for jid in job_wcet))
 
 
+def compute_cpu_load_lower_bound(jobs_data, endsystems):
+    """Lower bound from total CPU work over the available compute nodes."""
+    if not jobs_data or not endsystems:
+        return 0
+    total_wcet = sum(job["wcet_fullspeed"] for job in jobs_data)
+    return (total_wcet + len(endsystems) - 1) // len(endsystems)
+
+
 def build_routing_options(sender_job, receiver_job):
+    cache_key = (sender_job, receiver_job)
+    if cache_key in ROUTING_OPTIONS_CACHE:
+        return ROUTING_OPTIONS_CACHE[cache_key]
     
     routing_options = []
     option_counter = 0
@@ -202,7 +214,7 @@ def build_routing_options(sender_job, receiver_job):
 
                 option_counter += 1
                 
-   
+    ROUTING_OPTIONS_CACHE[cache_key] = routing_options
     return routing_options
 
 
@@ -973,13 +985,15 @@ if __name__ == "__main__":
                 undirected_links.add((min(ni, nj), max(ni, nj)))
 
     path_data = compute_k_paths(input_file, k=1)
+    ROUTING_OPTIONS_CACHE = {}
     num_jobs  = len(jobs_data)
     num_msgs  = len(messages_data)
 
     l_min = compute_lmin(jobs_data, messages_data)
+    cpu_load_min = compute_cpu_load_lower_bound(jobs_data, endsystems)
     t_max = app_deadline
 
-    SEARCH_LOWER_BOUND = l_min
+    SEARCH_LOWER_BOUND = max(l_min, cpu_load_min)
 
     low = max(l_min, SEARCH_LOWER_BOUND)
     high = t_max
@@ -993,12 +1007,16 @@ if __name__ == "__main__":
         progress.concise_step(
             10,
             "Loaded input and routing paths",
-            f"deadline={app_deadline}, jobs={num_jobs}, messages={num_msgs}",
+            f"deadline={app_deadline}, jobs={num_jobs}, messages={num_msgs}, lower_bound={SEARCH_LOWER_BOUND}",
         )
         progress.concise_step(25, "Started makespan search", f"T={low}..{high}")
     else:
         print(f"Search range: T = {low} to {high}")
-    NUM_WORKERS = 8
+    # The previous version tested an 8-value candidate block around each
+    # binary-search midpoint. That rebuilt and solved up to 8 independent SMT
+    # models per iteration. With the stronger lower bound above, a single
+    # midpoint check keeps the same binary-search semantics with less work.
+    NUM_WORKERS = 1
     next_progress_mark = 50
 
     while low <= high:

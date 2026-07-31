@@ -13,6 +13,7 @@ def generate_context(
     proc_failures=7,
     router_failures=3,
     slack_events=2,
+    input_file=None,
 
     # -----------------------------
     # Allowed nodes
@@ -34,6 +35,12 @@ def generate_context(
 
     if seed is not None:
         random.seed(seed)
+
+    input_data = None
+    deadline = 100
+    if input_file is not None:
+        input_data = load_json(input_file)
+        deadline = input_data["application"]["deadline"]
 
     if proc_failures + router_failures + slack_events != total_events:
         raise ValueError(
@@ -100,22 +107,30 @@ def generate_context(
             node_id = random.choice(slack_event_nodes)
             slack_event_nodes.remove(node_id)
 
-            # Execution time (seconds)
-            et = round(random.uniform(0.5, 10.0), 3)
+            # Execution percentage for the slack-event WCET update.
+            et = random.choice(range(10, 101, 10))
+
+        pred_event_id = None
+        parent_level = 0
+        if event_id > 0:
+            pred_event_id = random.randint(0, event_id - 1)
+            parent_level = events[pred_event_id]["dag_level"] + 1
+
+        event_time = parent_level * deadline + random.randint(0, deadline)
 
         event = {
             "event_id": event_id,
             "event_type": event_type,
-            "event_time": random.randint(0, 100), # update this to be more realistic if needed , #randomGenertor for slackpercentage.
-            "node_id": node_id,
+            "event_time": event_time,
             "ET": et,
-            "event_input": f"event_{event_id}_input.json",
-            "event_schedule": f"schedule_{event_id}.json",
-            "pred_event_id": None,
+            "pred_event_id": pred_event_id,
+            "dag_level": parent_level,
         }
 
-        if event_id > 0:
-            event["pred_event_id"] = random.randint(0, event_id - 1)
+        if event_type == "slack_event":
+            event["job_id"] = int(node_id)
+        else:
+            event["node_id"] = node_id
 
         events.append(event)
 
@@ -139,9 +154,10 @@ if __name__ == "__main__":
 
     generate_context(
         total_events=6,
-        proc_failures=3,
+        proc_failures=1,
         router_failures=1,
-        slack_events=2,
+        slack_events=4,
+        input_file=Path(__file__).resolve().parent.parent / "input" / "graph_1 - input.json",
 
         proc_failure_nodes=[
           
@@ -160,13 +176,9 @@ if __name__ == "__main__":
         ],
 
         slack_event_nodes=[
-             "1",
-            "2",
-            "3",
-            "11",
+            "18",
             "17",
-            "16",
-            "15",
+            "12",
             "7",
         ],
 

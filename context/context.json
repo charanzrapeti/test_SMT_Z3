@@ -5,87 +5,68 @@
         "event_time": 28,
         "ET": null,
         "pred_event_id": null,
-        "node_id": "9",
-        "implicit_failed_processors": [],
-        "affected_jobs": [],
+        "node_id": "4",
+        "dag_level": 0,
+        "implicit_failed_processors": [
+            1
+        ],
+        "isolated_processors_removed": [
+            1
+        ],
+        "removed_processors": [
+            1
+        ],
+        "affected_jobs": [
+            0,
+            4,
+            10
+        ],
         "event_input": "rout_failure_0_input.json",
         "event_schedule": "rout_failure_0_schedule.json",
-        "SAT": true
+        "SAT": true,
+        "schedule_calculation_seconds": 243.319575,
+        "scheduler_progress_log": "rout_failure_0_progress.txt",
+        "schedule_makespan": 55
     },
     {
         "event_id": 1,
         "event_type": "proc_failure",
-        "event_time": 94,
+        "event_time": 60,
         "ET": null,
         "pred_event_id": 0,
         "node_id": "2",
+        "dag_level": 1,
         "failed_processor": "2",
         "affected_jobs": [
+            0,
             4,
-            12
+            7,
+            8
         ],
         "event_input": "proc_failure_1_input.json",
         "event_schedule": "proc_failure_1_schedule.json",
-        "SAT": true
+        "SAT": true,
+        "schedule_calculation_seconds": 65.886493,
+        "scheduler_progress_log": "proc_failure_1_progress.txt",
+        "schedule_makespan": 58
     },
     {
         "event_id": 2,
         "event_type": "slack_event",
-        "event_time": 3,
-        "ET": 70,
-        "pred_event_id": 0,
-        "job_id": 18,
+        "event_time": 90,
+        "ET": 50,
+        "pred_event_id": 1,
+        "job_id": 7,
+        "dag_level": 2,
         "event_input": "slack_event_2_input.json",
         "event_schedule": "slack_event_2_schedule.json",
         "SAT": true,
-        "original_wcet": 87,
-        "actual_execution": 61,
-        "execution_percentage": 70,
-        "slack": 26
-    },
-    {
-        "event_id": 3,
-        "event_type": "slack_event",
-        "event_time": 35,
-        "ET": 40,
-        "pred_event_id": 2,
-        "job_id": 17,
-        "event_input": "slack_event_3_input.json",
-        "event_schedule": "slack_event_3_schedule.json",
-        "SAT": true,
-        "original_wcet": 94,
-        "actual_execution": 38,
-        "execution_percentage": 40,
-        "slack": 56
-    },
-    {
-        "event_id": 4,
-        "event_type": "slack_event",
-        "event_time": 62,
-        "ET": 90,
-        "pred_event_id": 3,
-        "job_id": 12,
-        "event_input": "slack_event_4_input.json",
-        "event_schedule": "slack_event_4_schedule.json",
-        "SAT": true,
-        "original_wcet": 30,
-        "actual_execution": 27,
-        "execution_percentage": 90,
-        "slack": 3
-    },
-    {
-        "event_id": 5,
-        "event_type": "slack_event",
-        "event_time": 83,
-        "ET": 50,
-        "pred_event_id": 4,
-        "job_id": 7,
-        "event_input": "slack_event_5_input.json",
-        "event_schedule": "slack_event_5_schedule.json",
-        "SAT": true,
-        "original_wcet": 69,
-        "actual_execution": 34,
+        "schedule_calculation_seconds": 655.058737,
+        "scheduler_progress_log": "slack_event_2_progress.txt",
+        "schedule_makespan": 54,
+        "original_wcet": 1,
+        "actual_execution": 0,
         "execution_percentage": 50,
-        "slack": 35
+        "slack": 1
     }
 ]
