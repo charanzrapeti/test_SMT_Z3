@@ -1,4 +1,5 @@
 import argparse
+from concurrent.futures import ProcessPoolExecutor
 import json
 import shutil
 import time
@@ -15,43 +16,119 @@ def load_input(input_path):
         return json.load(f)
 
 
-input_file = DEFAULT_INPUT_FILE
-data = load_input(input_file)
+input_file = None
+data = {}
 
-jobs_data      = data["application"]["jobs"]
-messages_data  = data["application"]["messages"]
-platform_nodes = data["platform"]["nodes"]
-app_deadline   = data["application"]["deadline"]
+jobs_data      = []
+messages_data  = []
+platform_nodes = []
+app_deadline   = 0
 
-endsystems = sorted([n["id"] for n in platform_nodes if not n["is_router"]])
-switches   = sorted([n["id"] for n in platform_nodes if     n["is_router"]])
-all_nodes  = endsystems + switches
+endsystems = []
+switches   = []
+all_nodes  = []
 
-num_endsystems = len(endsystems)
-num_switches   = len(switches)
-num_nodes      = len(all_nodes)
+num_endsystems = 0
+num_switches   = 0
+num_nodes      = 0
 
-node_to_idx      = {real_id: idx for idx, real_id in enumerate(all_nodes)}
-idx_to_node      = {idx: real_id for real_id, idx  in node_to_idx.items()}
-es_real_to_esidx = {real_id: i   for i, real_id    in enumerate(endsystems)}
+node_to_idx      = {}
+idx_to_node      = {}
+es_real_to_esidx = {}
 
-adj = [[False] * num_nodes for _ in range(num_nodes)]
-for link in data["platform"].get("links", []):
-    i = node_to_idx[link["start"]]
-    j = node_to_idx[link["end"]]
-    adj[i][j] = True
-    adj[j][i] = True
-
+adj = []
 undirected_links = set()
-for ni in range(num_nodes):
-    for nj in range(num_nodes):
-        if adj[ni][nj]:
-            undirected_links.add((min(ni, nj), max(ni, nj)))
-
-path_data = compute_k_paths(input_file, k=1)
-num_jobs  = len(jobs_data)
-num_msgs  = len(messages_data)
+path_data = {}
 ROUTING_OPTIONS_CACHE = {}
+num_jobs  = 0
+num_msgs  = 0
+node_speed_factors = {}
+
+
+def configure_runtime(input_path):
+    global input_file, data, jobs_data, messages_data, platform_nodes, app_deadline
+    global endsystems, switches, all_nodes, num_endsystems, num_switches, num_nodes
+    global node_to_idx, idx_to_node, es_real_to_esidx, adj, undirected_links
+    global path_data, num_jobs, num_msgs, ROUTING_OPTIONS_CACHE, node_speed_factors
+
+    input_file = str(input_path)
+    data = load_input(input_file)
+
+    jobs_data      = data["application"]["jobs"]
+    messages_data  = data["application"]["messages"]
+    platform_nodes = data["platform"]["nodes"]
+    app_deadline   = data["application"]["deadline"]
+
+    endsystems = sorted([n["id"] for n in platform_nodes if not n["is_router"]])
+    switches   = sorted([n["id"] for n in platform_nodes if     n["is_router"]])
+    all_nodes  = endsystems + switches
+
+    num_endsystems = len(endsystems)
+    num_switches   = len(switches)
+    num_nodes      = len(all_nodes)
+
+    node_to_idx      = {real_id: idx for idx, real_id in enumerate(all_nodes)}
+    idx_to_node      = {idx: real_id for real_id, idx  in node_to_idx.items()}
+    es_real_to_esidx = {real_id: i   for i, real_id    in enumerate(endsystems)}
+
+    adj = [[False] * num_nodes for _ in range(num_nodes)]
+    for link in data["platform"].get("links", []):
+        i = node_to_idx[link["start"]]
+        j = node_to_idx[link["end"]]
+        adj[i][j] = True
+        adj[j][i] = True
+
+    undirected_links = set()
+    for ni in range(num_nodes):
+        for nj in range(num_nodes):
+            if adj[ni][nj]:
+                undirected_links.add((min(ni, nj), max(ni, nj)))
+
+    path_data = compute_k_paths(input_file, k=1)
+    ROUTING_OPTIONS_CACHE = {}
+    num_jobs  = len(jobs_data)
+    num_msgs  = len(messages_data)
+    node_speed_factors = {
+        node["id"]: node.get("speed_factor", 1)
+        for node in platform_nodes
+        if not node["is_router"]
+    }
+
+import math
+
+def normalized_processing_times(job):
+    allowed_nodes = job["can_run_on"]
+    processing_times = job.get("processing_times")
+
+    if isinstance(processing_times, list) and len(processing_times) == len(allowed_nodes):
+        return [math.ceil(value) for value in processing_times]
+
+    return [
+        math.ceil(job["wcet_fullspeed"] * node_speed_factors.get(node_id, 1))
+        for node_id in allowed_nodes
+    ]
+
+
+def job_duration_options(job):
+    return {
+        es_real_to_esidx[node_id]: duration
+        for node_id, duration in zip(job["can_run_on"], normalized_processing_times(job))
+        if node_id in es_real_to_esidx
+    }
+
+
+def job_duration_expr(job_index, assigned_es_expr):
+    options = job_duration_options(jobs_data[job_index])
+    duration = jobs_data[job_index]["wcet_fullspeed"]
+    for es_idx, processing_time in reversed(list(options.items())):
+        duration = If(assigned_es_expr == es_idx, processing_time, duration)
+    return duration
+
+
+def job_duration_on_node(job, real_node):
+    options = dict(zip(job["can_run_on"], normalized_processing_times(job)))
+    return options.get(real_node, job["wcet_fullspeed"])
+
 
 
 class VerboseProgress:
@@ -125,7 +202,10 @@ def count_comparisons(users_by_resource):
 
 
 def compute_lmin(jobs_data, messages_data):
-    job_wcet     = {job["id"]: job["wcet_fullspeed"] for job in jobs_data}
+    job_wcet     = {
+        job["id"]: min(normalized_processing_times(job))
+        for job in jobs_data
+    }
     msg_receiver = {msg["id"]: msg["receiver"]       for msg in messages_data}
     msgs_sent_by = {}
     for msg in messages_data:
@@ -159,7 +239,10 @@ def compute_cpu_load_lower_bound(jobs_data, endsystems):
     """Lower bound from total CPU work over the available compute nodes."""
     if not jobs_data or not endsystems:
         return 0
-    total_wcet = sum(job["wcet_fullspeed"] for job in jobs_data)
+    total_wcet = sum(
+        min(normalized_processing_times(job))
+        for job in jobs_data
+    )
     return (total_wcet + len(endsystems) - 1) // len(endsystems)
 
 
@@ -218,16 +301,18 @@ def build_routing_options(sender_job, receiver_job):
     return routing_options
 
 
-def build_and_solve(T, progress=None):
+def build_and_solve(T, progress=None, optimization_options=None):
     if progress is None:
         progress = VerboseProgress()
+
+    optimization_options = optimization_options or []
 
     candidate_started_at = time.perf_counter()
     if progress.detailed:
         progress.emit("")
         progress.emit(f"Candidate T={T}: building SMT model")
 
-    solver = Solver()
+    solver = Optimize() if optimization_options else Solver()
     solver.set("timeout", 300000)  # 5 minutes per SMT check
 
     # ============================================================
@@ -323,10 +408,8 @@ def build_and_solve(T, progress=None):
         )
         job_domain_constraints += 1
 
-        wcet = job["wcet_fullspeed"]
-
         solver.add(job_start_time[i] >= 0)
-        solver.add(job_start_time[i] + wcet <= T)
+        solver.add(job_start_time[i] + job_duration_expr(i, job_assigned_es[i]) <= T)
         job_domain_constraints += 2
 
     progress.step(
@@ -347,15 +430,15 @@ def build_and_solve(T, progress=None):
         for j in range(i + 1, num_jobs):
             cpu_comparisons += 1
 
-            wcet_i = jobs_data[i]["wcet_fullspeed"]
-            wcet_j = jobs_data[j]["wcet_fullspeed"]
+            duration_i = job_duration_expr(i, job_assigned_es[i])
+            duration_j = job_duration_expr(j, job_assigned_es[j])
 
             solver.add(
                 Implies(
                     job_assigned_es[i] == job_assigned_es[j],
                     Or(
-                        job_start_time[i] + wcet_i <= job_start_time[j],
-                        job_start_time[j] + wcet_j <= job_start_time[i]
+                        job_start_time[i] + duration_i <= job_start_time[j],
+                        job_start_time[j] + duration_j <= job_start_time[i]
                     )
                 )
             )
@@ -390,6 +473,7 @@ def build_and_solve(T, progress=None):
     route_options_total = 0
     route_case_total = 0
     hop_var_total = 0
+    message_wait_terms = []
     for msg in messages_data:
 
         mid = msg["id"]
@@ -397,7 +481,7 @@ def build_and_solve(T, progress=None):
         sender_job = msg["sender"]
         receiver_job = msg["receiver"]
 
-        sender_wcet = jobs_data[sender_job]["wcet_fullspeed"]
+        sender_duration = job_duration_expr(sender_job, job_assigned_es[sender_job])
 
         # --------------------------------------------------------
         # COLLECT VALID ROUTES
@@ -434,7 +518,7 @@ def build_and_solve(T, progress=None):
         solver.add(
             msg_inject_time[mid]
             >=
-            job_start_time[sender_job] + sender_wcet
+            job_start_time[sender_job] + sender_duration
         )
 
         solver.add(msg_inject_time[mid] >= 0)
@@ -532,6 +616,17 @@ def build_and_solve(T, progress=None):
                     >=
                     local_hop_times[h] + 1
                 )
+
+            if num_hops > 1:
+                route_wait = Sum([
+                    local_hop_times[h + 1] - local_hop_times[h] - 1
+                    for h in range(num_hops - 1)
+                ])
+            else:
+                route_wait = 0
+            message_wait_terms.append(
+                If(msg_path_choice[mid] == rid, route_wait, 0)
+            )
 
             # ----------------------------------------------------
             # arrival time
@@ -712,43 +807,56 @@ def build_and_solve(T, progress=None):
     # ============================================================
     # NODE CONTENTION
     # ============================================================
+    # Intentionally omitted. Multiple messages may wait/occupy the same
+    # end-system or switch node; only wire/edge contention is modeled.
 
-    node_total_comparisons = count_comparisons(node_usage)
-    node_comparisons = 0
-    for key, users in node_usage.items():
+    # ============================================================
+    # SECONDARY OPTIMIZATION
+    # ============================================================
+    if optimization_options:
+        job_finish_exprs = [
+            job_start_time[i] + job_duration_expr(i, job_assigned_es[i])
+            for i in range(num_jobs)
+        ]
+        message_latency_terms = [
+            msg_arrival_time[mid] - msg_inject_time[mid]
+            for mid in range(num_msgs)
+        ]
 
-        for i in range(len(users)):
+        objective_details = []
+        for option in optimization_options:
+            if option == "makespan":
+                schedule_makespan = Int("optimized_schedule_makespan")
+                solver.add(schedule_makespan >= 0)
+                solver.add(schedule_makespan <= T)
+                for finish_expr in job_finish_exprs:
+                    solver.add(schedule_makespan >= finish_expr)
+                for arrival_expr in msg_arrival_time:
+                    solver.add(schedule_makespan >= arrival_expr)
+                solver.minimize(schedule_makespan)
+                objective_details.append("makespan")
+            elif option == "resource-usage":
+                solver.minimize(Sum([
+                    job_duration_expr(i, job_assigned_es[i])
+                    for i in range(num_jobs)
+                ]))
+                objective_details.append("resource-usage")
+            elif option == "message-wait":
+                solver.minimize(Sum(message_wait_terms) if message_wait_terms else 0)
+                objective_details.append("message-wait")
+            elif option == "low-latency":
+                solver.minimize(Sum(message_latency_terms) if message_latency_terms else 0)
+                objective_details.append("low-latency")
+            elif option == "job-start":
+                solver.minimize(Sum(job_start_time) if job_start_time else 0)
+                objective_details.append("job-start")
 
-            mid_i, rid_i, start_i, end_i = users[i]
-
-            for j in range(i + 1, len(users)):
-
-                mid_j, rid_j, start_j, end_j = users[j]
-
-                if mid_i == mid_j:
-                    continue
-
-                node_comparisons += 1
-
-                solver.add(
-                    Implies(
-                        And(
-                            msg_path_choice[mid_i] == rid_i,
-                            msg_path_choice[mid_j] == rid_j
-                        ),
-                        Or(
-                            end_i < start_j,
-                            end_j < start_i
-                        )
-                    )
-                )
-
-    progress.step(
-        "Add node-contention comparisons",
-        done=True,
-        percent=85,
-        detail=f"comparisons={node_comparisons}/{node_total_comparisons}",
-    )
+        progress.step(
+            "Add optimization objectives",
+            done=True,
+            percent=85,
+            detail=", ".join(objective_details),
+        )
 
     # ============================================================
     # SOLVE
@@ -774,9 +882,9 @@ def build_and_solve(T, progress=None):
 
     return True, solver.model()
 
-def try_T(T, progress=None):
+def try_T(T, progress=None, optimization_options=None):
 
-    feasible, model = build_and_solve(T, progress)
+    feasible, model = build_and_solve(T, progress, optimization_options)
 
     if not feasible:
         return T, False, None
@@ -796,37 +904,6 @@ def try_T(T, progress=None):
     }
 
     for i, job in enumerate(jobs_data):
-
-        es_idx = model[
-            Int(f"job_{i}_endsystem")
-        ].as_long()
-
-        real_node = endsystems[es_idx]
-
-        start_time = model[
-            Int(f"job_{i}_start")
-        ].as_long()
-
-        wcet = job["wcet_fullspeed"]
-
-        job_info[job["id"]] = {
-            "job_id": job["id"],
-            "assigned_node": real_node,
-            "start_time": start_time,
-            "finish_time": start_time + wcet,
-            "wcet": wcet,
-            "dependencies": job_dependencies[job["id"]],
-        }
-
-    # ============================================================
-    # MESSAGE INFO
-    # ============================================================
-
-    msg_details = []
-
-    for msg in messages_data:
-
-        mid = msg["id"]
 
         sender_job = msg["sender"]
         receiver_job = msg["receiver"]
@@ -885,6 +962,8 @@ def try_T(T, progress=None):
                 {
                     "node": idx_to_node[chosen_path_nodes[0]],
                     "timeframe": inject_tf
+
+
                 }
             )
 
@@ -922,6 +1001,38 @@ def try_T(T, progress=None):
 
     return T, True, schedule
 
+def worker_try_T(T):
+    return try_T(T, VerboseProgress())
+
+def normalize_optimization_options(raw_options):
+    aliases = {
+        "makespan": "makespan",
+        "resource": "resource-usage",
+        "resources": "resource-usage",
+        "resource-usage": "resource-usage",
+        "resource_usage": "resource-usage",
+        "message-wait": "message-wait",
+        "message_wait": "message-wait",
+        "less-message-waiting": "message-wait",
+        "low-latency": "low-latency",
+        "low_latency": "low-latency",
+        "latency": "low-latency",
+        "job-start": "job-start",
+        "job_start": "job-start",
+        "job-start-time": "job-start",
+        "job_start_time": "job-start",
+    }
+    normalized = []
+    for option in raw_options or []:
+        for item in option:
+            key = item.strip().lower()
+            if key not in aliases:
+                raise ValueError(f"Unknown optimization option: {item}")
+            value = aliases[key]
+            if value not in normalized:
+                normalized.append(value)
+    return normalized
+
 # ── CRITICAL: all execution must be inside this guard on Windows ──
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the SMT scheduler.")
@@ -944,50 +1055,31 @@ if __name__ == "__main__":
         "--progress-log",
         help="Optional text file where verbose scheduler progress should be saved.",
     )
+    parser.add_argument(
+        "--optimize",
+        nargs="+",
+        action="append",
+        metavar="OBJECTIVE",
+        help=(
+            "Optional final optimization pass after the best T is found. "
+            "Choices: makespan, resource-usage, message-wait, low-latency, job-start."
+        ),
+    )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=10,
+        help="Number of parallel workers for makespan search (default: 10).",
+    )
     args = parser.parse_args()
+    optimization_options = normalize_optimization_options(args.optimize)
     progress = VerboseProgress(
         enabled=args.verbose_progress,
         log_file=args.progress_log,
     )
     scheduler_started_at = time.perf_counter()
-
     input_file = args.input_file
-    data = load_input(input_file)
-
-    jobs_data      = data["application"]["jobs"]
-    messages_data  = data["application"]["messages"]
-    platform_nodes = data["platform"]["nodes"]
-    app_deadline   = data["application"]["deadline"]
-
-    endsystems = sorted([n["id"] for n in platform_nodes if not n["is_router"]])
-    switches   = sorted([n["id"] for n in platform_nodes if     n["is_router"]])
-    all_nodes  = endsystems + switches
-
-    num_endsystems = len(endsystems)
-    num_switches   = len(switches)
-    num_nodes      = len(all_nodes)
-
-    node_to_idx      = {real_id: idx for idx, real_id in enumerate(all_nodes)}
-    idx_to_node      = {idx: real_id for real_id, idx  in node_to_idx.items()}
-    es_real_to_esidx = {real_id: i   for i, real_id    in enumerate(endsystems)}
-
-    adj = [[False] * num_nodes for _ in range(num_nodes)]
-    for link in data["platform"].get("links", []):
-        i = node_to_idx[link["start"]]
-        j = node_to_idx[link["end"]]
-        adj[i][j] = True
-        adj[j][i] = True
-
-    undirected_links = set()
-    for ni in range(num_nodes):
-        for nj in range(num_nodes):
-            if adj[ni][nj]:
-                undirected_links.add((min(ni, nj), max(ni, nj)))
-
-    path_data = compute_k_paths(input_file, k=1)
-    ROUTING_OPTIONS_CACHE = {}
-    num_jobs  = len(jobs_data)
-    num_msgs  = len(messages_data)
+    configure_runtime(input_file)
 
     l_min = compute_lmin(jobs_data, messages_data)
     cpu_load_min = compute_cpu_load_lower_bound(jobs_data, endsystems)
@@ -1012,65 +1104,92 @@ if __name__ == "__main__":
         progress.concise_step(25, "Started makespan search", f"T={low}..{high}")
     else:
         print(f"Search range: T = {low} to {high}")
-    # The previous version tested an 8-value candidate block around each
-    # binary-search midpoint. That rebuilt and solved up to 8 independent SMT
-    # models per iteration. With the stronger lower bound above, a single
-    # midpoint check keeps the same binary-search semantics with less work.
-    NUM_WORKERS = 1
+    NUM_WORKERS = args.workers
     next_progress_mark = 50
 
-    while low <= high:
-        mid = (low + high) // 2
+    with ProcessPoolExecutor(
+        max_workers=NUM_WORKERS,
+        initializer=configure_runtime,
+        initargs=(input_file,),
+    ) as executor:
+        while low <= high:
+            range_size = high - low + 1
+            if range_size <= NUM_WORKERS:
+                candidates = list(range(low, high + 1))
+            else:
+                step = range_size / (NUM_WORKERS + 1)
+                candidates = sorted(list(set(
+                    low + round(i * step) for i in range(1, NUM_WORKERS + 1)
+                )))
+                candidates = [c for c in candidates if low <= c <= high]
 
-        # build a contiguous candidate block centered near mid
-        half = NUM_WORKERS // 2
-        a = max(low, mid - half)
-        b = min(high, a + NUM_WORKERS - 1)
+            a = min(candidates)
+            b = max(candidates)
 
-        candidates = list(range(a, b + 1))
-        if not args.verbose_progress:
-            print(f"Trying T candidates: {candidates} ...")
-        candidates_checked += len(candidates)
-
-        results = [try_T(candidate, progress) for candidate in candidates]
-
-        # collect SAT results
-        sat_ts = [t for (t, feasible, sched) in results if feasible]
-
-        if sat_ts:
-            t_sat = min(sat_ts)
             if not args.verbose_progress:
-                print(f"  SAT found at T = {t_sat}")
+                print(f"Trying T candidates: {candidates} ...")
+            candidates_checked += len(candidates)
 
-            # store schedule for smallest SAT found
-            for (t, feasible, sched) in results:
-                if t == t_sat and feasible:
-                    optimal_T = t_sat
-                    best_schedule = sched
-                    break
+            results = list(executor.map(worker_try_T, candidates))
 
-            # narrow search to values < t_sat
-            high = t_sat - 1
-        else:
-            if not args.verbose_progress:
-                print(f"  No SAT in range {a}..{b}")
-            # all tested were UNSAT -> advance lower bound
-            low = b + 1
+            # collect SAT results
+            sat_ts = [t for (t, feasible, sched) in results if feasible]
 
-        if args.verbose_progress:
-            remaining = max(0, high - low + 1)
-            search_percent = 25 + int(65 * (1 - (remaining / search_total)))
-            while next_progress_mark <= min(90, search_percent):
-                progress.concise_step(
-                    next_progress_mark,
-                    "Searching candidate makespans",
-                    f"checked={candidates_checked}, remaining~={remaining}",
-                )
-                next_progress_mark += 25
+            if sat_ts:
+                t_sat = min(sat_ts)
+                if not args.verbose_progress:
+                    print(f"  SAT found at T = {t_sat}")
+
+                # store schedule for smallest SAT found
+                for (t, feasible, sched) in results:
+                    if t == t_sat and feasible:
+                        optimal_T = t_sat
+                        best_schedule = sched
+                        break
+
+                # narrow search to values < t_sat
+                high = t_sat - 1
+
+                # Update the lower bound based on the largest UNSAT candidate below t_sat
+                unsat_ts = [t for (t, feasible, sched) in results if not feasible and t < t_sat]
+                if unsat_ts:
+                    low = max(low, max(unsat_ts) + 1)
+            else:
+                if not args.verbose_progress:
+                    print(f"  No SAT in range {low}..{b}")
+                # all tested were UNSAT -> advance lower bound
+                low = b + 1
+
+            if args.verbose_progress:
+                remaining = max(0, high - low + 1)
+                search_percent = 25 + int(65 * (1 - (remaining / search_total)))
+                while next_progress_mark <= min(90, search_percent):
+                    progress.concise_step(
+                        next_progress_mark,
+                        "Searching candidate makespans",
+                        f"checked={candidates_checked}, remaining~={remaining}",
+                    )
+                    next_progress_mark += 25
 
     scheduler_seconds = time.perf_counter() - scheduler_started_at
 
     if best_schedule is not None:
+        optimized_output_file = None
+        if optimization_options:
+            if args.verbose_progress:
+                progress.concise_step(90, "Optimizing final schedule", ", ".join(optimization_options))
+            else:
+                print(f"\nOptimizing final schedule: {', '.join(optimization_options)}")
+
+            _, optimized, optimized_schedule = try_T(
+                optimal_T, progress, optimization_options=optimization_options
+            )
+            if optimized:
+                best_schedule = optimized_schedule
+            elif not args.verbose_progress:
+                print("Optimization pass did not find a schedule; keeping the feasible schedule.")
+            scheduler_seconds = time.perf_counter() - scheduler_started_at
+
         if args.verbose_progress:
             progress.concise_step(90, "Writing schedule output")
         else:
@@ -1079,7 +1198,11 @@ if __name__ == "__main__":
         output = {
             "optimal_makespan": optimal_T,
             "schedule_calculation_seconds": round(scheduler_seconds, 6),
-            "schedule":         best_schedule,
+            "workers": NUM_WORKERS,
+            "candidates_checked": candidates_checked,
+            "search_lower_bound": SEARCH_LOWER_BOUND,
+            "optimizations": optimization_options,
+            "schedule": best_schedule,
         }
         base_name   = Path(input_file).stem
         output_file = f"output/{base_name}_smt_output.json"
@@ -1088,12 +1211,29 @@ if __name__ == "__main__":
         if not args.verbose_progress:
             print(f"Schedule written to {output_file}")
 
+        if optimization_options:
+            optimized_suffix = "_".join(optimization_options).replace("-", "_")
+            optimized_output_file = f"output/{base_name}_smt_optimized_{optimized_suffix}.json"
+            with open(optimized_output_file, "w") as f:
+                json.dump(output, f, indent=4)
+            if not args.verbose_progress:
+                print(f"Optimized schedule written to {optimized_output_file}")
+
         scheduled_output_file = output_file
         if args.output_file:
             shutil.copyfile(output_file, args.output_file)
             scheduled_output_file = args.output_file
             if not args.verbose_progress:
                 print(f"Schedule copied to {args.output_file}")
+
+            if optimization_options and optimized_output_file:
+                output_path = Path(args.output_file)
+                copied_optimized_output = output_path.with_name(
+                    f"{output_path.stem}_optimized_{optimized_suffix}{output_path.suffix}"
+                )
+                shutil.copyfile(optimized_output_file, copied_optimized_output)
+                if not args.verbose_progress:
+                    print(f"Optimized schedule copied to {copied_optimized_output}")
 
         # ── Pretty-print summary to console ──
         if args.verbose_progress:

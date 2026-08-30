@@ -199,7 +199,7 @@ def output_path_for(input_path):
     return OUTPUT_DIR / f"{input_path.stem}_smt_output.json"
 
 
-def run_scheduler(scheduler, input_path, timeout_seconds):
+def run_scheduler(scheduler, input_path, timeout_seconds, workers):
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     target_output = output_path_for(input_path)
     root_output = Path("output") / f"{input_path.stem}_smt_output.json"
@@ -209,6 +209,8 @@ def run_scheduler(scheduler, input_path, timeout_seconds):
         str(input_path),
         "--output-file",
         str(target_output),
+        "--workers",
+        str(workers),
     ]
     
     start_time_epoch = time.time()
@@ -253,11 +255,14 @@ def run_scheduler(scheduler, input_path, timeout_seconds):
         "makespan": None,
         "stdout_tail": stdout[-1000:] if stdout else "",
         "stderr_tail": stderr[-1000:] if stderr else "",
+        "workers": workers,
     }
     if target_output.exists():
         schedule = json.loads(target_output.read_text(encoding="utf-8"))
         result["makespan"] = schedule.get("optimal_makespan")
         result["scheduler_reported_seconds"] = schedule.get("schedule_calculation_seconds")
+        result["candidates_checked"] = schedule.get("candidates_checked")
+        result["search_lower_bound"] = schedule.get("search_lower_bound")
     if root_output.exists() and root_output.resolve() != target_output.resolve():
         root_output.unlink()
     return result
@@ -279,6 +284,9 @@ def save_results(results, label):
                 "elapsed_seconds",
                 "scheduler_reported_seconds",
                 "makespan",
+                "workers",
+                "candidates_checked",
+                "search_lower_bound",
             ],
         )
         writer.writeheader()
@@ -326,17 +334,22 @@ def main():
     parser.add_argument("--min-messages", type=int, default=None)
     parser.add_argument("--max-messages", type=int, default=None)
     parser.add_argument("--message-phase", action="store_true")
+    parser.add_argument("--workers", type=int, default=None, help="Parallel scheduler workers/cores.")
     args = parser.parse_args()
 
     start, stop, min_messages, max_messages = resolve_run_config(args)
+    workers = prompt_int("Number of workers/cores", args.workers, 3, min_value=1)
     base_data = json.loads(BASE_INPUT.read_text(encoding="utf-8"))
     scheduler = Path(args.scheduler)
     results = []
+    # Avoid overwriting a previous 3/6/10-worker benchmark when the caller
+    # leaves the default label unchanged.
+    label = f"{args.label}_w{workers}"
 
     for task_count in range(start, stop + 1, args.step):
         message_count = message_count_for_task(task_count, min_messages, max_messages)
         input_path = write_input(base_data, task_count, message_count)
-        run = run_scheduler(scheduler, input_path, args.timeout)
+        run = run_scheduler(scheduler, input_path, args.timeout, workers)
         run.update({"file": input_path.name, "tasks": task_count, "messages": message_count})
         results.append(run)
         print(f'{input_path.name}: {run["status"]}, time={run["elapsed_seconds"]:.3f}s, makespan={run["makespan"]}', flush=True)
@@ -349,15 +362,15 @@ def main():
             task_count = max(ok_task_counts)
             for message_count in range(min_messages, min(max_messages, task_count - 1) + 1):
                 input_path = write_input(base_data, task_count, message_count)
-                run = run_scheduler(scheduler, input_path, args.timeout)
+                run = run_scheduler(scheduler, input_path, args.timeout, workers)
                 run.update({"file": input_path.name, "tasks": task_count, "messages": message_count})
                 results.append(run)
                 print(f'{input_path.name}: {run["status"]}, time={run["elapsed_seconds"]:.3f}s, makespan={run["makespan"]}', flush=True)
                 if run["status"] != "ok":
                     break
 
-    json_path, csv_path = save_results(results, args.label)
-    plot_path = plot_results(results, args.label)
+    json_path, csv_path = save_results(results, label)
+    plot_path = plot_results(results, label)
     print(f"results_json={json_path}")
     print(f"results_csv={csv_path}")
     if plot_path:
