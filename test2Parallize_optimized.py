@@ -1068,7 +1068,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--workers",
         type=int,
-        default=10,
+        default=1,
         help="Number of parallel workers for makespan search (default: 10).",
     )
     args = parser.parse_args()

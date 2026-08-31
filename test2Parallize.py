@@ -1011,6 +1011,12 @@ if __name__ == "__main__":
             "Choices: makespan, resource-usage, message-wait, low-latency, job-start."
         ),
     )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        help="Number of parallel workers for makespan search."
+    )
     args = parser.parse_args()
     optimization_options = normalize_optimization_options(args.optimize)
     progress = VerboseProgress(
@@ -1044,7 +1050,7 @@ if __name__ == "__main__":
         progress.concise_step(25, "Started makespan search", f"T={low}..{high}")
     else:
         print(f"Search range: T = {low} to {high}")
-    NUM_WORKERS = 10
+    NUM_WORKERS = args.workers
     next_progress_mark = 50
 
     with ProcessPoolExecutor(
@@ -1198,14 +1204,3 @@ if __name__ == "__main__":
     else:
         print("No feasible schedule exists within the application deadline.")
 
-    progress.close()
-            for msg in best_schedule["messages"]:
-                print(f"  Msg {msg['msg_id']:>2} | {msg['sender_node']} -> {msg['receiver_node']} | "
-                      f"inject@tf={msg['inject_timeframe']}  arrive@tf={msg['arrive_timeframe']}")
-
-      
-
-    else:
-        print("No feasible schedule exists within the application deadline.")
-
-    progress.close()

@@ -325,7 +325,7 @@ def plot_results(results, label):
 
 def main():
     parser = argparse.ArgumentParser(description="Generate and run scheduler job stress tests.")
-    parser.add_argument("--scheduler", default="test2Parallize_optimized.py", help="Scheduler script to benchmark.")
+    parser.add_argument("--scheduler", default="test2Parallize.py", help="Scheduler script to benchmark.")
     parser.add_argument("--label", default="baseline", help="Suffix for result files.")
     parser.add_argument("--start", type=int, default=None)
     parser.add_argument("--stop", type=int, default=None)
@@ -354,6 +354,12 @@ def main():
         results.append(run)
         print(f'{input_path.name}: {run["status"]}, time={run["elapsed_seconds"]:.3f}s, makespan={run["makespan"]}', flush=True)
         if run["status"] != "ok":
+            print(f"\n--- SUBPROCESS FAILED FOR {input_path.name} ---")
+            print("STDOUT tail:")
+            print(run.get("stdout_tail", "No stdout captured"))
+            print("STDERR tail:")
+            print(run.get("stderr_tail", "No stderr captured"))
+            print("-" * 50, flush=True)
             break
 
     if args.message_phase:
