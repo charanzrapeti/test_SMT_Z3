@@ -6,7 +6,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-
+import concurrent.futures
 import matplotlib.pyplot as plt
 
 
@@ -71,10 +71,7 @@ def output_path_for(input_path):
 # RUN SCHEDULER
 # ============================================================
 
-def run_scheduler(scheduler, input_path, timeout_seconds, workers):
-    """
-    Run the scheduler for one input JSON file.
-    """
+def run_scheduler(scheduler, input_path, workers):
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -92,17 +89,11 @@ def run_scheduler(scheduler, input_path, timeout_seconds, workers):
 
     print()
     print("=" * 70)
-    print(f"Running scheduler:")
+    print("Running scheduler:")
     print(f"  Input   : {input_path}")
     print(f"  Output  : {target_output}")
     print(f"  Workers : {workers}")
     print("=" * 70)
-
-    start_time_epoch = time.time()
-    start_time_str = time.strftime(
-        "%Y-%m-%d %H:%M:%S",
-        time.localtime(start_time_epoch)
-    )
 
     started_at = time.perf_counter()
 
@@ -113,64 +104,10 @@ def run_scheduler(scheduler, input_path, timeout_seconds, workers):
         text=True,
     )
 
-    try:
-        stdout, stderr = process.communicate(
-            timeout=timeout_seconds
-        )
+    # Wait indefinitely
+    stdout, stderr = process.communicate()
 
-        elapsed = time.perf_counter() - started_at
-
-    except subprocess.TimeoutExpired:
-
-        end_time_epoch = time.time()
-        end_time_str = time.strftime(
-            "%Y-%m-%d %H:%M:%S",
-            time.localtime(end_time_epoch)
-        )
-
-        timeout_minutes = timeout_seconds / 60.0
-
-        if timeout_minutes.is_integer():
-            timeout_minutes_str = f"{int(timeout_minutes)}min"
-        else:
-            timeout_minutes_str = f"{timeout_minutes:.1f}min"
-
-        print()
-        print(
-            f"scheduler timeout exceeded "
-            f"{timeout_minutes_str}"
-        )
-        print(
-            f"Start time of scheduler: {start_time_str}"
-        )
-        print(
-            f"End time of scheduler:   {end_time_str}"
-        )
-
-        # Windows:
-        # terminate the complete process tree
-        try:
-            subprocess.run(
-                [
-                    "taskkill",
-                    "/F",
-                    "/T",
-                    "/PID",
-                    str(process.pid),
-                ],
-                capture_output=True,
-            )
-        except Exception:
-            process.kill()
-
-        return {
-            "status": "timeout",
-            "elapsed_seconds": timeout_seconds,
-            "makespan": None,
-            "stdout_tail": "",
-            "stderr_tail": "Scheduler timeout exceeded.",
-            "workers": workers,
-        }
+    elapsed = time.perf_counter() - started_at
 
     result = {
         "status": (
@@ -186,10 +123,7 @@ def run_scheduler(scheduler, input_path, timeout_seconds, workers):
         "workers": workers,
     }
 
-    # --------------------------------------------------------
     # Read scheduler output
-    # --------------------------------------------------------
-
     if target_output.exists():
 
         try:
@@ -230,6 +164,59 @@ def run_scheduler(scheduler, input_path, timeout_seconds, workers):
             )
 
     return result
+
+
+def run_one_input(args_tuple):
+
+    index, input_path, scheduler, workers = args_tuple
+
+    print(
+        f"[START {index}] {input_path.name}"
+    )
+
+    try:
+        task_count, message_count = get_input_info(
+            input_path
+        )
+
+    except Exception as exc:
+
+        return {
+            "file": input_path.name,
+            "tasks": None,
+            "messages": None,
+            "status": "invalid_input",
+            "elapsed_seconds": 0,
+            "makespan": None,
+            "workers": workers,
+            "stdout_tail": "",
+            "stderr_tail": str(exc),
+        }
+
+    run = run_scheduler(
+        scheduler=scheduler,
+        input_path=input_path,
+        workers=workers,
+    )
+
+    run.update(
+        {
+            "file": input_path.name,
+            "tasks": task_count,
+            "messages": message_count,
+        }
+    )
+
+    print(
+        f"[FINISHED {index}] "
+        f"{input_path.name} | "
+        f"status={run['status']} | "
+        f"time={run['elapsed_seconds']:.3f}s | "
+        f"makespan={run['makespan']}"
+    )
+
+    return run
+
 
 
 # ============================================================
@@ -468,15 +455,6 @@ def main():
         )
     )
 
-    parser.add_argument(
-        "--timeout",
-        type=int,
-        default=1800,
-        help=(
-            "Maximum scheduler runtime per input "
-            "in seconds. Default: 1800."
-        )
-    )
 
     parser.add_argument(
         "--workers",
@@ -487,6 +465,19 @@ def main():
             "Default: 1."
         )
     )
+
+    parser.add_argument(
+        "--cores",
+        type=int,
+        default=1,
+        help=(
+            "Number of input files to run in parallel. "
+            "Each file uses one scheduler process. "
+            "Default: 1."
+        )
+    )
+
+    
 
     args = parser.parse_args()
 
@@ -599,133 +590,99 @@ def main():
     )
 
     print(
-        f"Timeout         : "
-        f"{args.timeout}s"
+        f"Parallel cores  : "
+        f"{args.cores}"
     )
 
     print("=" * 70)
 
-    # --------------------------------------------------------
-    # Run every existing input file
-    # --------------------------------------------------------
+
+    # Run input files in parallel
+
 
     results = []
 
-    for index, input_path in enumerate(
-        input_files,
-        start=1
-    ):
-
-        print()
-        print(
-            f"[{index}/{len(input_files)}] "
-            f"{input_path.name}"
+    job_arguments = [
+        (
+            index,
+            input_path,
+            scheduler,
+            args.workers
         )
-
-        # Read task/message counts
-        try:
-
-            task_count, message_count = (
-                get_input_info(input_path)
-            )
-
-        except Exception as exc:
-
-            print(
-                f"ERROR reading "
-                f"{input_path.name}: {exc}"
-            )
-
-            results.append(
-                {
-                    "file": input_path.name,
-                    "tasks": None,
-                    "messages": None,
-                    "status": "invalid_input",
-                    "elapsed_seconds": 0,
-                    "makespan": None,
-                    "workers": args.workers,
-                    "stdout_tail": "",
-                    "stderr_tail": str(exc),
-                }
-            )
-
-            continue
-
-        print(
-            f"Tasks    : {task_count}"
+        for index, input_path in enumerate(
+            input_files,
+            start=1
         )
+    ]
 
-        print(
-            f"Messages : {message_count}"
-        )
+    print()
+    print(
+        f"Running up to {args.cores} input files "
+        f"in parallel..."
+    )
+    print()
 
-        # ----------------------------------------------------
-        # Run scheduler
-        # ----------------------------------------------------
+    with concurrent.futures.ProcessPoolExecutor(
+        max_workers=args.cores
+    ) as executor:
 
-        run = run_scheduler(
-            scheduler=scheduler,
-            input_path=input_path,
-            timeout_seconds=args.timeout,
-            workers=args.workers,
-        )
+        futures = {
+            executor.submit(
+                run_one_input,
+                job_args
+            ): job_args[0]
+            for job_args in job_arguments
+        }
 
-        run.update(
-            {
-                "file": input_path.name,
-                "tasks": task_count,
-                "messages": message_count,
-            }
-        )
+        for future in concurrent.futures.as_completed(
+            futures
+        ):
 
-        results.append(run)
+            index = futures[future]
 
-        print()
-        print(
-            f"Result: {run['status']}"
-        )
+            try:
 
-        print(
-            f"Runtime: "
-            f"{run['elapsed_seconds']:.3f}s"
-        )
+                result = future.result()
 
-        print(
-            f"Makespan: "
-            f"{run['makespan']}"
-        )
+                results.append(result)
 
-        # ----------------------------------------------------
-        # Do NOT stop if one input fails.
-        # Continue with the remaining files.
-        # ----------------------------------------------------
-
-        if run["status"] != "ok":
-
-            print()
-            print(
-                f"--- SCHEDULER FAILED FOR "
-                f"{input_path.name} ---"
-            )
-
-            print("STDOUT tail:")
-            print(
-                run.get(
-                    "stdout_tail",
-                    ""
+                print()
+                print(
+                    f"[COLLECTED {index}] "
+                    f"{result['file']} | "
+                    f"status={result['status']} | "
+                    f"time={result['elapsed_seconds']:.3f}s | "
+                    f"makespan={result['makespan']}"
                 )
-            )
 
-            print("STDERR tail:")
-            print(
-                run.get(
-                    "stderr_tail",
-                    ""
+            except Exception as exc:
+
+                print()
+                print(
+                    f"[ERROR {index}] "
+                    f"Worker process failed: {exc}"
                 )
-            )
 
-            print("-" * 70)
+    # --------------------------------------------------------
+    # Sort results before saving
+    # --------------------------------------------------------
+
+    results.sort(
+        key=lambda row: (
+            row["tasks"]
+            if row["tasks"] is not None
+            else float("inf"),
+
+            row["messages"]
+            if row["messages"] is not None
+            else float("inf"),
+
+            row["file"]
+        )
+    )
+    
+
+
 
     # --------------------------------------------------------
     # Save benchmark results
