@@ -15,8 +15,8 @@ COMPUTE_NODES = [1, 2, 3, 11, 17, 16, 15, 7]
 SPEED_FACTOR_PATTERN = [1, 2, 1.5, 1, 2, 1.5, 1, 2]
 WCET_PATTERN = [82, 60, 27, 64, 75, 24, 64, 69, 24, 47, 10, 90, 30, 72, 49, 82, 18, 94, 87, 49]
 BASE_INPUT = Path("input/graph_1 - input.json")
-INPUT_DIR = Path("input/job stress test")
-OUTPUT_DIR = Path("output/job stress test")
+INPUT_DIR = Path("input/job_stress_test")
+OUTPUT_DIR = Path("output/job_stress_test")
 
 
 def allowed_nodes_for_job(job_id):

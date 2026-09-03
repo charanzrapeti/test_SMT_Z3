@@ -366,14 +366,16 @@ def plot_results(results, input_dir):
         x_values,
         elapsed,
         marker="o",
-        label="Scheduler time (s)"
+        label="Scheduler time (s)",
+        color="tab:green"
     )
 
     span_line = ax_span.plot(
         x_values,
         makespan,
         marker="s",
-        label="Schedule makespan"
+        label="Schedule makespan",
+        color="tab:blue"
     )
 
     ax_time.set_xticks(

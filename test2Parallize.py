@@ -9,7 +9,7 @@ from z3 import *
 from util.KPathFinding2 import compute_k_paths
 
 # ── module-level setup (safe to run in workers too) ──
-DEFAULT_INPUT_FILE = "input/graph_0.json"
+DEFAULT_INPUT_FILE = "D:\\masters\\project_work\\test_code\\input\\job_stress_test\\45_8.json"
 
 
 def load_input(input_path):

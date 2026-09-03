@@ -693,7 +693,7 @@ def main():
     if len(sys.argv) < 2:
         print(
             "Usage:\n"
-            "    python tgff_to_json.py <input.tgff>"
+            "    python inputFileGenerator.py <input.tgff>"
         )
         sys.exit(1)
 
