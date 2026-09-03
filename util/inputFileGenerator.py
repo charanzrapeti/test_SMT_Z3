@@ -719,7 +719,7 @@ def main():
     print(f"  {tgff_path}")
 
     # Output directory = current directory.
-    output_dir = Path(".")
+    output_dir = Path("./input/job_stress_test")
 
     for graph in graphs:
 
