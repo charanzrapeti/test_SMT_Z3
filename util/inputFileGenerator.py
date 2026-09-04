@@ -299,36 +299,28 @@ def parse_tgff(filepath):
 # ─────────────────────────────────────────────────────────────────────────────
 # can_run_on generation
 # ─────────────────────────────────────────────────────────────────────────────
+# Minimum and maximum number of processors
+# that a job can run on.
+MIN_NODES = 3
+MAX_NODES = 5
 
 def allowed_nodes_for_job(job_id):
     """
-    Same varying-width strategy as the supplied stress-test code.
+    Randomly select the processors on which a job can execute.
 
-    Width cycles through:
+    The number of processors is randomly selected between
+    MIN_NODES and MAX_NODES.
 
-        1, 2, 3, 3, 2, 1, 3, 2
-
-    Nodes are selected deterministically from COMPUTE_NODES.
-
-    This means every job can execute on between 1 and 3
-    non-router nodes.
+    The processors themselves are randomly selected from
+    COMPUTE_NODES without replacement.
     """
 
-    width_pattern = [1, 2, 3, 3, 2, 1, 3, 2]
+    number_of_nodes = random.randint(MIN_NODES, MAX_NODES)
 
-    width = width_pattern[job_id % len(width_pattern)]
-
-    start = (
-        job_id * 3 + job_id // 2
-    ) % len(COMPUTE_NODES)
-
-    return [
-        COMPUTE_NODES[
-            (start + offset) % len(COMPUTE_NODES)
-        ]
-        for offset in range(width)
-    ]
-
+    return random.sample(
+        COMPUTE_NODES,
+        number_of_nodes
+    )
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Processing times
