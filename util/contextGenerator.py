@@ -9,10 +9,10 @@ def load_json(path):
 
 
 def generate_context(
-    total_events=10,
-    proc_failures=7,
-    router_failures=3,
-    slack_events=2,
+    total_events=13,
+    proc_failures=2,
+    router_failures=2,
+    slack_events=9,
     input_file=None,
 
     # -----------------------------
@@ -153,9 +153,9 @@ def generate_context(
 if __name__ == "__main__":
 
     generate_context(
-        total_events=6,
-        proc_failures=1,
-        router_failures=1,
+        total_events=13,
+        proc_failures=5,
+        router_failures=4,
         slack_events=4,
         input_file=Path(__file__).resolve().parent.parent / "input" / "graph_1 - input.json",
 
@@ -172,7 +172,12 @@ if __name__ == "__main__":
         ],
 
         router_failure_nodes=[
-            "9"
+            "9",
+            "8",
+            "10",
+            "12",
+            "13",
+            "14"
         ],
 
         slack_event_nodes=[
@@ -180,6 +185,14 @@ if __name__ == "__main__":
             "17",
             "12",
             "7",
+            "6",
+            "5",
+            "4",
+            "9",
+            "3",
+            "2",
+            "1"
+
         ],
 
         seed=42,

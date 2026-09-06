@@ -301,8 +301,9 @@ def parse_tgff(filepath):
 # ─────────────────────────────────────────────────────────────────────────────
 # Minimum and maximum number of processors
 # that a job can run on.
-MIN_NODES = 3
-MAX_NODES = 5
+MIN_NODES = 2
+MAX_NODES = 4
+
 
 def allowed_nodes_for_job(job_id):
     """
@@ -711,7 +712,7 @@ def main():
     print(f"  {tgff_path}")
 
     # Output directory = current directory.
-    output_dir = Path("./input/job_stress_test")
+    output_dir = Path("D:/masters/project_work/test_code/context/inputFiles")
 
     for graph in graphs:
 

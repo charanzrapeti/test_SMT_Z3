@@ -2,71 +2,320 @@
     {
         "event_id": 0,
         "event_type": "rout_failure",
-        "event_time": 28,
+        "event_time": 30,
         "ET": null,
         "pred_event_id": null,
-        "node_id": "4",
         "dag_level": 0,
-        "implicit_failed_processors": [
-            1
-        ],
-        "isolated_processors_removed": [
-            1
-        ],
-        "removed_processors": [
-            1
-        ],
-        "affected_jobs": [
-            0,
-            4,
-            10
-        ],
+        "node_id": "9",
+        "implicit_failed_processors": [],
+        "isolated_processors_removed": [],
+        "removed_processors": [],
+        "affected_jobs": [],
         "event_input": "rout_failure_0_input.json",
         "event_schedule": "rout_failure_0_schedule.json",
         "SAT": true,
-        "schedule_calculation_seconds": 243.319575,
+        "schedule_calculation_seconds": 13.918647,
         "scheduler_progress_log": "rout_failure_0_progress.txt",
-        "schedule_makespan": 55
+        "schedule_makespan": 182
     },
     {
         "event_id": 1,
-        "event_type": "proc_failure",
-        "event_time": 60,
+        "event_type": "rout_failure",
+        "event_time": 988,
         "ET": null,
         "pred_event_id": 0,
-        "node_id": "2",
         "dag_level": 1,
-        "failed_processor": "2",
-        "affected_jobs": [
-            0,
-            4,
-            7,
-            8
+        "node_id": "8",
+        "implicit_failed_processors": [
+            7
         ],
-        "event_input": "proc_failure_1_input.json",
-        "event_schedule": "proc_failure_1_schedule.json",
+        "isolated_processors_removed": [
+            7
+        ],
+        "removed_processors": [
+            7
+        ],
+        "affected_jobs": [
+            4,
+            9,
+            13,
+            17
+        ],
+        "event_input": "rout_failure_1_input.json",
+        "event_schedule": "rout_failure_1_schedule.json",
         "SAT": true,
-        "schedule_calculation_seconds": 65.886493,
-        "scheduler_progress_log": "proc_failure_1_progress.txt",
-        "schedule_makespan": 58
+        "schedule_calculation_seconds": 10.245315,
+        "scheduler_progress_log": "rout_failure_1_progress.txt",
+        "schedule_makespan": 203
     },
     {
         "event_id": 2,
-        "event_type": "slack_event",
-        "event_time": 90,
-        "ET": 50,
-        "pred_event_id": 1,
-        "job_id": 7,
-        "dag_level": 2,
-        "event_input": "slack_event_2_input.json",
-        "event_schedule": "slack_event_2_schedule.json",
+        "event_type": "proc_failure",
+        "event_time": 1483,
+        "ET": null,
+        "pred_event_id": 0,
+        "dag_level": 1,
+        "node_id": "1",
+        "failed_processor": "1",
+        "affected_jobs": [
+            0,
+            3,
+            5,
+            7,
+            12,
+            13,
+            15
+        ],
+        "event_input": "proc_failure_2_input.json",
+        "event_schedule": "proc_failure_2_schedule.json",
         "SAT": true,
-        "schedule_calculation_seconds": 655.058737,
-        "scheduler_progress_log": "slack_event_2_progress.txt",
-        "schedule_makespan": 54,
-        "original_wcet": 1,
-        "actual_execution": 0,
-        "execution_percentage": 50,
-        "slack": 1
+        "schedule_calculation_seconds": 8.162988,
+        "scheduler_progress_log": "proc_failure_2_progress.txt",
+        "schedule_makespan": 220
+    },
+    {
+        "event_id": 3,
+        "event_type": "slack_event",
+        "event_time": 1725,
+        "ET": 90,
+        "pred_event_id": 1,
+        "dag_level": 2,
+        "job_id": 1,
+        "event_input": "slack_event_3_input.json",
+        "event_schedule": "slack_event_3_schedule.json",
+        "SAT": true,
+        "schedule_calculation_seconds": 9.974623,
+        "scheduler_progress_log": "slack_event_3_progress.txt",
+        "schedule_makespan": 182,
+        "original_wcet": 42,
+        "actual_execution": 38,
+        "execution_percentage": 90,
+        "slack": 4
+    },
+    {
+        "event_id": 4,
+        "event_type": "slack_event",
+        "event_time": 1506,
+        "ET": 100,
+        "pred_event_id": 2,
+        "dag_level": 2,
+        "job_id": 9,
+        "event_input": "slack_event_4_input.json",
+        "event_schedule": "slack_event_4_schedule.json",
+        "SAT": true,
+        "schedule_calculation_seconds": 12.11741,
+        "scheduler_progress_log": "slack_event_4_progress.txt",
+        "schedule_makespan": 182,
+        "original_wcet": 50,
+        "actual_execution": 50,
+        "execution_percentage": 100,
+        "slack": 0
+    },
+    {
+        "event_id": 5,
+        "event_type": "rout_failure",
+        "event_time": 2598,
+        "ET": null,
+        "pred_event_id": 3,
+        "dag_level": 3,
+        "node_id": "12",
+        "implicit_failed_processors": [
+            15
+        ],
+        "isolated_processors_removed": [
+            15
+        ],
+        "removed_processors": [
+            15
+        ],
+        "affected_jobs": [
+            2,
+            3,
+            6,
+            7,
+            8,
+            11,
+            12,
+            14,
+            16,
+            17,
+            18
+        ],
+        "event_input": "rout_failure_5_input.json",
+        "event_schedule": "rout_failure_5_schedule.json",
+        "SAT": true,
+        "schedule_calculation_seconds": 2.590087,
+        "scheduler_progress_log": "rout_failure_5_progress.txt",
+        "schedule_makespan": 221
+    },
+    {
+        "event_id": 6,
+        "event_type": "slack_event",
+        "event_time": 1844,
+        "ET": 30,
+        "pred_event_id": 1,
+        "dag_level": 2,
+        "job_id": 6,
+        "event_input": "slack_event_6_input.json",
+        "event_schedule": "slack_event_6_schedule.json",
+        "SAT": true,
+        "schedule_calculation_seconds": 9.712242,
+        "scheduler_progress_log": "slack_event_6_progress.txt",
+        "schedule_makespan": 182,
+        "original_wcet": 54,
+        "actual_execution": 16,
+        "execution_percentage": 30,
+        "slack": 38
+    },
+    {
+        "event_id": 7,
+        "event_type": "rout_failure",
+        "event_time": 1139,
+        "ET": null,
+        "pred_event_id": 0,
+        "dag_level": 1,
+        "node_id": "10",
+        "implicit_failed_processors": [
+            11
+        ],
+        "isolated_processors_removed": [
+            11
+        ],
+        "removed_processors": [
+            11
+        ],
+        "affected_jobs": [
+            1,
+            10,
+            13,
+            16
+        ],
+        "event_input": "rout_failure_7_input.json",
+        "event_schedule": "rout_failure_7_schedule.json",
+        "SAT": true,
+        "schedule_calculation_seconds": 5.433738,
+        "scheduler_progress_log": "rout_failure_7_progress.txt",
+        "schedule_makespan": 222
+    },
+    {
+        "event_id": 8,
+        "event_type": "proc_failure",
+        "event_time": 3352,
+        "ET": null,
+        "pred_event_id": 5,
+        "dag_level": 4,
+        "node_id": "2",
+        "failed_processor": "2",
+        "affected_jobs": [
+            0,
+            1,
+            2,
+            4,
+            6,
+            9,
+            10,
+            15,
+            17,
+            19
+        ],
+        "event_input": "proc_failure_8_input.json",
+        "event_schedule": "proc_failure_8_schedule.json",
+        "SAT": true,
+        "schedule_calculation_seconds": 6.476851,
+        "scheduler_progress_log": "proc_failure_8_progress.txt",
+        "schedule_makespan": 203
+    },
+    {
+        "event_id": 9,
+        "event_type": "proc_failure",
+        "event_time": 2294,
+        "ET": null,
+        "pred_event_id": 4,
+        "dag_level": 3,
+        "node_id": "15",
+        "failed_processor": "15",
+        "affected_jobs": [
+            2,
+            3,
+            6,
+            7,
+            8,
+            11,
+            12,
+            14,
+            16,
+            17,
+            18
+        ],
+        "event_input": "proc_failure_9_input.json",
+        "event_schedule": "proc_failure_9_schedule.json",
+        "SAT": true,
+        "schedule_calculation_seconds": 2.576591,
+        "scheduler_progress_log": "proc_failure_9_progress.txt",
+        "schedule_makespan": 221
+    },
+    {
+        "event_id": 10,
+        "event_type": "proc_failure",
+        "event_time": 3877,
+        "ET": null,
+        "pred_event_id": 8,
+        "dag_level": 5,
+        "node_id": "16",
+        "failed_processor": "16",
+        "affected_jobs": [
+            0,
+            2,
+            11,
+            15,
+            19
+        ],
+        "event_input": "proc_failure_10_input.json",
+        "event_schedule": "proc_failure_10_schedule.json",
+        "SAT": true,
+        "schedule_calculation_seconds": 12.230099,
+        "scheduler_progress_log": "proc_failure_10_progress.txt",
+        "schedule_makespan": 208
+    },
+    {
+        "event_id": 11,
+        "event_type": "proc_failure",
+        "event_time": 2065,
+        "ET": null,
+        "pred_event_id": 1,
+        "dag_level": 2,
+        "node_id": "7",
+        "failed_processor": "7",
+        "affected_jobs": [
+            4,
+            9,
+            13,
+            17
+        ],
+        "event_input": "proc_failure_11_input.json",
+        "event_schedule": "proc_failure_11_schedule.json",
+        "SAT": true,
+        "schedule_calculation_seconds": 9.047262,
+        "scheduler_progress_log": "proc_failure_11_progress.txt",
+        "schedule_makespan": 203
+    },
+    {
+        "event_id": 12,
+        "event_type": "slack_event",
+        "event_time": 3591,
+        "ET": 100,
+        "pred_event_id": 5,
+        "dag_level": 4,
+        "job_id": 5,
+        "event_input": "slack_event_12_input.json",
+        "event_schedule": "slack_event_12_schedule.json",
+        "SAT": true,
+        "schedule_calculation_seconds": 11.947508,
+        "scheduler_progress_log": "slack_event_12_progress.txt",
+        "schedule_makespan": 182,
+        "original_wcet": 48,
+        "actual_execution": 48,
+        "execution_percentage": 100,
+        "slack": 0
     }
 ]

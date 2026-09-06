@@ -9,7 +9,7 @@ from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent
 CONTEXT_FILE = ROOT_DIR / "context" / "context.json"
-BASE_INPUT_FILE = ROOT_DIR / "input" / "graph_0 - input.json"
+BASE_INPUT_FILE = ROOT_DIR / "context" / "inputFiles" / "20_6.json"
 EVENT_INPUT_DIR = ROOT_DIR / "input"
 EVENT_SCHEDULE_DIR = ROOT_DIR / "prevSchedules" / "contextSchedules"
 SCHEDULER_LOG_DIR = ROOT_DIR / "context" / "schedulerLogs"
