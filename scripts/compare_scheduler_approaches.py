@@ -159,6 +159,11 @@ def run_scheduler(script, input_file, output_file):
     print(f"Input:   {input_file.name}")
     print("=" * 70)
 
+    print("Python:", sys.executable)
+    print("Script:", script)
+    print("Input:", input_file)
+    print("CWD:", PROJECT_ROOT)
+
     started = time.perf_counter()
 
     try:
@@ -173,6 +178,14 @@ def run_scheduler(script, input_file, output_file):
             text=True,
         )
         wall_time = time.perf_counter() - started
+
+        print("RETURN CODE:", completed.returncode)
+
+        print("----- STDOUT -----")
+        print(completed.stdout)
+
+        print("----- STDERR -----")
+        print(completed.stderr)
     except Exception as error:
         wall_time = time.perf_counter() - started
         return {
