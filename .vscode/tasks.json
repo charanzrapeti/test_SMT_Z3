@@ -1,0 +1,24 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run on OMNI Cluster",
+            "type": "shell",
+            "command": "wsl",
+            "args": [
+                "bash",
+                "-c",
+                "rsync -az --delete -e \"ssh -i ~/.ssh/charan_windows_key\" /mnt/d/masters/project_work/test_code/ g780658@omni.zimt.uni-siegen.de:~/test_code/ && ssh -i ~/.ssh/charan_windows_key g780658@omni.zimt.uni-siegen.de \"cd ~/test_code && python3 test.py\""
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            },
+            "problemMatcher": []
+        }
+    ]
+}
