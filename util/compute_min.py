@@ -85,7 +85,7 @@ def compute_lmin(jobs_data, messages_data, verbose=True):
 
 
 if __name__ == "__main__":
-    input_file = "../input/graph_2.json"
+    input_file = "D:\\masters\\project_work\\test_code\\misc\\example_100T_fixed.json" 
     with open(input_file, "r") as f:
         data = json.load(f)
 
