@@ -1,0 +1,277 @@
+{
+    "platform": {
+      "nodes": [
+        { "id": "P1001", "is_router": false },
+        { "id": "P1002", "is_router": false },
+        { "id": "P1003", "is_router": false },
+        { "id": "P1004", "is_router": false },
+        { "id": "P1005", "is_router": false },
+        { "id": "P1006", "is_router": false },
+        { "id": "P1007", "is_router": false },
+        { "id": "P1008", "is_router": false },
+        { "id": "P1009", "is_router": false },
+        { "id": "P1010", "is_router": false },
+        { "id": "P1011", "is_router": false },
+        { "id": "P1012", "is_router": false },
+        { "id": "P1013", "is_router": false },
+        { "id": "P1014", "is_router": false },
+        { "id": "P1015", "is_router": false },
+        { "id": "P1016", "is_router": false },
+        { "id": "P1017", "is_router": false },
+        { "id": "P1018", "is_router": false },
+        { "id": "P1019", "is_router": false },
+        { "id": "P1020", "is_router": false },
+        { "id": "P1021", "is_router": false },
+        { "id": "P1022", "is_router": false },
+        { "id": "P1023", "is_router": false },
+        { "id": "P1024", "is_router": false },
+        { "id": "P1025", "is_router": false },
+  
+        { "id": "R101", "is_router": true },
+        { "id": "R102", "is_router": true },
+        { "id": "R103", "is_router": true },
+        { "id": "R104", "is_router": true },
+        { "id": "R105", "is_router": true },
+        { "id": "R106", "is_router": true },
+        { "id": "R107", "is_router": true },
+        { "id": "R108", "is_router": true },
+        { "id": "R109", "is_router": true },
+        { "id": "R110", "is_router": true },
+        { "id": "R111", "is_router": true },
+        { "id": "R112", "is_router": true },
+        { "id": "R113", "is_router": true },
+        { "id": "R114", "is_router": true },
+        { "id": "R115", "is_router": true },
+        { "id": "R116", "is_router": true },
+        { "id": "R117", "is_router": true },
+        { "id": "R118", "is_router": true },
+        { "id": "R119", "is_router": true },
+        { "id": "R120", "is_router": true },
+        { "id": "R121", "is_router": true },
+        { "id": "R122", "is_router": true },
+        { "id": "R123", "is_router": true },
+        { "id": "R124", "is_router": true },
+        { "id": "R125", "is_router": true },
+  
+        { "id": "RID1", "is_router": true },
+        { "id": "RID4", "is_router": true },
+        { "id": "RID5", "is_router": true }
+      ],
+      "links": [
+        
+        { "start": "P1001", "end": "R101" },
+        { "start": "R101",  "end": "R102" },
+        { "start": "R102",  "end": "R103" },
+        { "start": "R103",  "end": "R104" },
+        { "start": "R104",  "end": "R105" },
+        { "start": "R105",  "end": "P1005" },
+  
+        { "start": "P1006", "end": "R106" },
+        { "start": "R106",  "end": "R107" },
+        { "start": "R107",  "end": "R108" },
+        { "start": "R108",  "end": "R109" },
+        { "start": "R109",  "end": "R110" },
+        { "start": "R110",  "end": "P1010" },
+  
+        
+        { "start": "P1011", "end": "R111" },
+        { "start": "R111",  "end": "R112" },
+        { "start": "R112",  "end": "R113" },
+        { "start": "R113",  "end": "R114" },
+        { "start": "R114",  "end": "R115" },
+        { "start": "R115",  "end": "P1015" },
+  
+        
+        { "start": "P1016", "end": "R116" },
+        { "start": "R116",  "end": "R117" },
+        { "start": "R117",  "end": "R118" },
+        { "start": "R118",  "end": "R119" },
+        { "start": "R119",  "end": "R120" },
+        { "start": "R120",  "end": "P1020" },
+  
+        
+        { "start": "P1021", "end": "R121" },
+        { "start": "R121",  "end": "R122" },
+        { "start": "R122",  "end": "R123" },
+        { "start": "R123",  "end": "R124" },
+        { "start": "R124",  "end": "R125" },
+        { "start": "R125",  "end": "P1025" },
+  
+     
+        { "start": "R101", "end": "R106" },
+        { "start": "R106", "end": "R111" },
+        { "start": "R111", "end": "R116" },
+        { "start": "R116", "end": "R121" },
+  
+        
+        { "start": "R102", "end": "R107" },
+        { "start": "R107", "end": "R112" },
+        { "start": "R112", "end": "R117" },
+        { "start": "R117", "end": "R122" },
+  
+        
+        { "start": "R103", "end": "R108" },
+        { "start": "R108", "end": "R113" },
+        { "start": "R113", "end": "R118" },
+        { "start": "R118", "end": "R123" },
+  
+        
+        { "start": "R104", "end": "R109" },
+        { "start": "R109", "end": "R114" },
+        { "start": "R114", "end": "R119" },
+        { "start": "R119", "end": "R124" },
+  
+        
+        { "start": "R105", "end": "R110" },
+        { "start": "R110", "end": "R115" },
+        { "start": "R115", "end": "R120" },
+        { "start": "R120", "end": "R125" },
+  
+        
+        { "start": "R101", "end": "RID1" },
+        { "start": "R101", "end": "RID4" },
+        { "start": "R101", "end": "RID5" },
+  
+        
+        { "start": "R102", "end": "RID1" },
+        { "start": "R102", "end": "RID4" },
+        { "start": "R102", "end": "RID5" },
+  
+        
+        { "start": "R103", "end": "RID1" },
+        { "start": "R103", "end": "RID4" },
+        { "start": "R103", "end": "RID5" },
+  
+        
+        { "start": "R104", "end": "RID1" },
+        { "start": "R104", "end": "RID4" },
+        { "start": "R104", "end": "RID5" },
+  
+       
+        { "start": "R105", "end": "RID1" },
+        { "start": "R105", "end": "RID4" },
+        { "start": "R105", "end": "RID5" },
+  
+        
+        { "start": "R106", "end": "RID1" },
+        { "start": "R106", "end": "RID4" },
+        { "start": "R106", "end": "RID5" },
+  
+        
+        { "start": "R107", "end": "RID1" },
+        { "start": "R107", "end": "RID4" },
+        { "start": "R107", "end": "RID5" },
+  
+        
+        { "start": "R108", "end": "RID1" },
+        { "start": "R108", "end": "RID4" },
+        { "start": "R108", "end": "RID5" },
+  
+        
+        { "start": "R109", "end": "RID1" },
+        { "start": "R109", "end": "RID4" },
+        { "start": "R109", "end": "RID5" },
+  
+       
+        { "start": "R110", "end": "RID1" },
+        { "start": "R110", "end": "RID4" },
+        { "start": "R110", "end": "RID5" },
+  
+        
+        { "start": "R111", "end": "RID1" },
+        { "start": "R111", "end": "RID4" },
+        { "start": "R111", "end": "RID5" },
+  
+        
+        { "start": "R112", "end": "RID1" },
+        { "start": "R112", "end": "RID4" },
+        { "start": "R112", "end": "RID5" },
+  
+        
+        { "start": "R113", "end": "RID1" },
+        { "start": "R113", "end": "RID4" },
+        { "start": "R113", "end": "RID5" },
+  
+        
+        { "start": "R114", "end": "RID1" },
+        { "start": "R114", "end": "RID4" },
+        { "start": "R114", "end": "RID5" },
+  
+        
+        { "start": "R115", "end": "RID1" },
+        { "start": "R115", "end": "RID4" },
+        { "start": "R115", "end": "RID5" },
+  
+        
+        { "start": "R116", "end": "RID1" },
+        { "start": "R116", "end": "RID4" },
+        { "start": "R116", "end": "RID5" },
+  
+       
+        { "start": "R117", "end": "RID1" },
+        { "start": "R117", "end": "RID4" },
+        { "start": "R117", "end": "RID5" },
+  
+       
+        { "start": "R118", "end": "RID1" },
+        { "start": "R118", "end": "RID4" },
+        { "start": "R118", "end": "RID5" },
+  
+        
+        { "start": "R119", "end": "RID1" },
+        { "start": "R119", "end": "RID4" },
+        { "start": "R119", "end": "RID5" },
+  
+        
+        { "start": "R120", "end": "RID1" },
+        { "start": "R120", "end": "RID4" },
+        { "start": "R120", "end": "RID5" },
+  
+        
+        { "start": "R121", "end": "RID1" },
+        { "start": "R121", "end": "RID4" },
+        { "start": "R121", "end": "RID5" },
+  
+        
+        { "start": "R122", "end": "RID1" },
+        { "start": "R122", "end": "RID4" },
+        { "start": "R122", "end": "RID5" },
+  
+        
+        { "start": "R123", "end": "RID1" },
+        { "start": "R123", "end": "RID4" },
+        { "start": "R123", "end": "RID5" },
+  
+        
+        { "start": "R124", "end": "RID1" },
+        { "start": "R124", "end": "RID4" },
+        { "start": "R124", "end": "RID5" },
+  
+        
+        { "start": "R125", "end": "RID1" },
+        { "start": "R125", "end": "RID4" },
+        { "start": "R125", "end": "RID5" },
+
+        { "start": "P1002", "end": "R102" },
+        { "start": "P1003", "end": "R103" },
+        { "start": "P1004", "end": "R104" },
+
+        { "start": "P1007", "end": "R107" },
+        { "start": "P1008", "end": "R108" },
+        { "start": "P1009", "end": "R109" },
+
+        { "start": "P1012", "end": "R112" },
+        { "start": "P1013", "end": "R113" },
+        { "start": "P1014", "end": "R114" },
+
+        { "start": "P1017", "end": "R117" },
+        { "start": "P1018", "end": "R118" },
+        { "start": "P1019", "end": "R119" },
+
+        { "start": "P1022", "end": "R122" },
+        { "start": "P1023", "end": "R123" },
+        { "start": "P1024", "end": "R124" }
+      ]
+    }
+  }
+  

@@ -20,51 +20,86 @@ RANDOM_SEED = 42
 # Application deadline = hard deadline * this factor
 DEADLINE_FACTOR = 1.5
 
-# Platform
-PLATFORM = {
-    "nodes": [
-        {"id": 1,  "is_router": False},
-        {"id": 2,  "is_router": False},
-        {"id": 3,  "is_router": False},
-        {"id": 4,  "is_router": True},
-        {"id": 5,  "is_router": True},
-        {"id": 6,  "is_router": True},
-        {"id": 7,  "is_router": False},
-        {"id": 8,  "is_router": True},
-        {"id": 9,  "is_router": True},
-        {"id": 10, "is_router": True},
-        {"id": 11, "is_router": False},
-        {"id": 12, "is_router": True},
-        {"id": 13, "is_router": True},
-        {"id": 14, "is_router": True},
-        {"id": 15, "is_router": False},
-        {"id": 16, "is_router": False},
-        {"id": 17, "is_router": False},
-    ],
+def convert_platform(json_path):
+    """
+    Load a platform JSON file, convert node IDs to sequential
+    integers, and return the converted platform dictionary.
 
-    "links": [
-        {"start": 4,  "end": 1},
-        {"start": 5,  "end": 2},
-        {"start": 6,  "end": 3},
-        {"start": 4,  "end": 5},
-        {"start": 4,  "end": 8},
-        {"start": 5,  "end": 6},
-        {"start": 5,  "end": 9},
-        {"start": 6,  "end": 10},
-        {"start": 8,  "end": 7},
-        {"start": 8,  "end": 9},
-        {"start": 9,  "end": 10},
-        {"start": 8,  "end": 12},
-        {"start": 9,  "end": 13},
-        {"start": 10, "end": 14},
-        {"start": 10, "end": 11},
-        {"start": 12, "end": 13},
-        {"start": 13, "end": 14},
-        {"start": 12, "end": 15},
-        {"start": 13, "end": 16},
-        {"start": 14, "end": 17},
-    ]
-}
+    Args:
+        json_path: Path to the input .json file
+
+    Returns:
+        {
+            "nodes": [...],
+            "links": [...]
+        }
+    """
+
+    # Load JSON file
+    with open(json_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    # Get platform from JSON
+    platform = data["platform"]
+
+    # --------------------------------------------------
+    # Create ID mapping
+    #
+    # Example:
+    # P1001 -> 1
+    # P1002 -> 2
+    # ...
+    # R101  -> 26
+    # ...
+    # RID1  -> 51
+    # --------------------------------------------------
+
+    id_mapping = {}
+
+    for new_id, node in enumerate(platform["nodes"], start=1):
+        old_id = node["id"]
+        id_mapping[old_id] = new_id
+
+    # --------------------------------------------------
+    # Convert nodes
+    # --------------------------------------------------
+
+    nodes = []
+
+    for node in platform["nodes"]:
+        nodes.append({
+            "id": id_mapping[node["id"]],
+            "is_router": node["is_router"]
+        })
+
+    # --------------------------------------------------
+    # Convert links
+    # --------------------------------------------------
+
+    links = []
+
+    for link in platform["links"]:
+        links.append({
+            "start": id_mapping[link["start"]],
+            "end": id_mapping[link["end"]]
+        })
+
+    # --------------------------------------------------
+    # Return Python object
+    # --------------------------------------------------
+
+    return {
+        "nodes": nodes,
+        "links": links
+    }
+
+# Platform loaded from the project JSON file and normalized via convert_platform().
+PLATFORM_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "platform"
+    / "cloudModel1.json"
+)
+PLATFORM = convert_platform(str(PLATFORM_PATH))
 
 FREQUENCIES = [500, 1000]
 
@@ -82,32 +117,27 @@ SCHEMES = [
 # Compute nodes and speed factors
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Derive compute nodes from the actual platform data: any node that is not a router.
 COMPUTE_NODES = [
-    1, 2, 3, 11, 17, 16, 15, 7
+    node["id"]
+    for node in PLATFORM["nodes"]
+    if not node["is_router"]
 ]
 
-# Same speed-factor pattern as your existing stress-test script.
-SPEED_FACTOR_PATTERN = [
-    1, 2, 1.5, 1, 2, 1.5, 1, 2
-]
+# Use a random speed factor for each compute node, with values from 1, 1.5, 2.
+SPEED_FACTOR_VALUES = [1, 1.5, 2]
 
 
 def speed_factors_by_node():
     """
-    Assign the processing-power/speed factor to each compute node.
+    Assign a random processing-power/speed factor to each compute node.
 
-    Node 1  -> 1
-    Node 2  -> 2
-    Node 3  -> 1.5
-    Node 11 -> 1
-    Node 17 -> 2
-    Node 16 -> 1.5
-    Node 15 -> 1
-    Node 7  -> 2
+    Each non-router compute node receives one of the supported values:
+    1, 1.5, or 2.
     """
     return {
-        node_id: SPEED_FACTOR_PATTERN[index]
-        for index, node_id in enumerate(COMPUTE_NODES)
+        node_id: random.choice(SPEED_FACTOR_VALUES)
+        for node_id in COMPUTE_NODES
     }
 
 
@@ -301,8 +331,8 @@ def parse_tgff(filepath):
 # ─────────────────────────────────────────────────────────────────────────────
 # Minimum and maximum number of processors
 # that a job can run on.
-MIN_NODES = 2
-MAX_NODES = 4
+MIN_NODES = 1
+MAX_NODES = 3
 
 
 def allowed_nodes_for_job(job_id):

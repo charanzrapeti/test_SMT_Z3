@@ -1,9 +1,12 @@
 
 
+import argparse
 import csv
 import json
+import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -152,7 +155,7 @@ def extract_result(stdout, input_file):
 # RUN ONE SCHEDULER
 # ============================================================
 
-def run_scheduler(script, input_file, output_file):
+def run_scheduler(script, input_file, output_file, timeout_seconds=1800):
     print()
     print("=" * 70)
     print(f"Running: {script.name}")
@@ -163,29 +166,72 @@ def run_scheduler(script, input_file, output_file):
     print("Script:", script)
     print("Input:", input_file)
     print("CWD:", PROJECT_ROOT)
+    print(f"Timeout: {timeout_seconds} seconds")
 
     started = time.perf_counter()
 
+    process = None
     try:
-        completed = subprocess.run(
+        process = subprocess.Popen(
             [
                 sys.executable,
                 str(script),
                 str(input_file),
             ],
             cwd=PROJECT_ROOT,
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
+            start_new_session=(os.name != "nt"),
         )
+
+        stdout, stderr = process.communicate(timeout=timeout_seconds)
         wall_time = time.perf_counter() - started
 
-        print("RETURN CODE:", completed.returncode)
+        print("RETURN CODE:", process.returncode)
 
         print("----- STDOUT -----")
-        print(completed.stdout)
+        print(stdout)
 
         print("----- STDERR -----")
-        print(completed.stderr)
+        print(stderr)
+    except subprocess.TimeoutExpired:
+        wall_time = time.perf_counter() - started
+        if process is not None:
+            try:
+                if os.name == "nt":
+                    subprocess.run(
+                        ["taskkill", "/F", "/T", "/PID", str(process.pid)],
+                        capture_output=True,
+                        check=False,
+                    )
+                else:
+                    os.killpg(process.pid, signal.SIGKILL)
+            except Exception:
+                process.kill()
+            try:
+                stdout, stderr = process.communicate()
+            except Exception:
+                stdout, stderr = "", ""
+        else:
+            stdout, stderr = "", ""
+
+        result = {
+            "status": "timeout",
+            "makespan": None,
+            "scheduler_seconds": None,
+            "wall_seconds": wall_time,
+            "stdout": stdout,
+            "stderr": stderr,
+        }
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        if stdout:
+            output_file.write_text(stdout, encoding="utf-8")
+        if stderr:
+            output_file.with_suffix(".stderr.txt").write_text(stderr, encoding="utf-8")
+        print("Status:          timeout")
+        print(f"Process time:     {wall_time:.6f} s")
+        return result
     except Exception as error:
         wall_time = time.perf_counter() - started
         return {
@@ -197,11 +243,14 @@ def run_scheduler(script, input_file, output_file):
             "stderr": str(error),
         }
 
-    stdout = completed.stdout
-    stderr = completed.stderr
+    # `process.communicate()` already returns the captured output. Using
+    # `process.stdout` / `process.stderr` here is invalid because the pipes are
+    # closed immediately after `communicate()` returns.
+    stdout = stdout if stdout is not None else ""
+    stderr = stderr if stderr is not None else ""
     result = extract_result(stdout, input_file)
 
-    if completed.returncode != 0:
+    if process.returncode != 0:
         result["status"] = "failed"
 
     result["wall_seconds"] = wall_time
@@ -365,11 +414,26 @@ def save_comparison_artifacts(rows, output_dir):
 # ============================================================
 
 def main():
+    parser = argparse.ArgumentParser(description="Compare the two scheduler implementations on clustered SMT inputs.")
+    parser.add_argument(
+        "--timeout-per-scheduler",
+        type=float,
+        default=1800.0,
+        help="Maximum seconds to allow each solver run before marking it as timed out. Default: 1800 (30 minutes).",
+    )
+    parser.add_argument(
+        "--input-dir",
+        type=Path,
+        default=INPUT_DIR,
+        help="Folder containing the input JSON benchmark files.",
+    )
+    args = parser.parse_args()
+
     print("=" * 70)
     print("SMT SCHEDULER COMPARISON")
     print("=" * 70)
     print(f"Project root : {PROJECT_ROOT}")
-    print(f"Input folder : {INPUT_DIR}")
+    print(f"Input folder : {args.input_dir}")
     print(f"Results      : {RESULTS_DIR}")
 
     if not TEST_SCRIPT.exists():
@@ -378,13 +442,13 @@ def main():
     if not TEST2_SCRIPT.exists():
         raise FileNotFoundError(f"Could not find: {TEST2_SCRIPT}")
 
-    if not INPUT_DIR.exists():
-        raise FileNotFoundError(f"Could not find input directory: {INPUT_DIR}")
+    if not args.input_dir.exists():
+        raise FileNotFoundError(f"Could not find input directory: {args.input_dir}")
 
     create_directories()
 
     input_files = sorted(
-        INPUT_DIR.glob("*.json"),
+        args.input_dir.glob("*.json"),
         key=lambda path: (
             get_jobs_messages(path)[0]
             if get_jobs_messages(path)[0] is not None
@@ -416,8 +480,8 @@ def main():
         test_output = TEST_OUTPUT_DIR / f"{input_file.stem}.txt"
         test2_output = TEST2_OUTPUT_DIR / f"{input_file.stem}.txt"
 
-        test_result = run_scheduler(TEST_SCRIPT, input_file, test_output)
-        test2_result = run_scheduler(TEST2_SCRIPT, input_file, test2_output)
+        test_result = run_scheduler(TEST_SCRIPT, input_file, test_output, timeout_seconds=args.timeout_per_scheduler)
+        test2_result = run_scheduler(TEST2_SCRIPT, input_file, test2_output, timeout_seconds=args.timeout_per_scheduler)
 
         rows.append(
             {
