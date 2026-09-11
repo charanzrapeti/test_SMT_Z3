@@ -30,7 +30,7 @@ import matplotlib.pyplot as plt
 #     input/job_stress_test/stress_plot.svg
 
 INPUT_DIR = Path("input/job_stress_test")
-OUTPUT_DIR = Path("output/job_stress_test")
+OUTPUT_DIR = Path("output/job_stress_test2")
 
 DEFAULT_SCHEDULER = "test2Parallize.py"
 

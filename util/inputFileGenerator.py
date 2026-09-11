@@ -97,7 +97,7 @@ def convert_platform(json_path):
 PLATFORM_PATH = (
     Path(__file__).resolve().parents[1]
     / "platform"
-    / "cloudModel1.json"
+    / "CloudModel1.json"
 )
 PLATFORM = convert_platform(str(PLATFORM_PATH))
 
@@ -742,7 +742,7 @@ def main():
     print(f"  {tgff_path}")
 
     # Output directory = current directory.
-    output_dir = Path("D:/masters/project_work/test_code/context/inputFiles")
+    output_dir = Path("/home/g780658/test_SMT_Z3/context/inputFiles")
 
     for graph in graphs:
 
