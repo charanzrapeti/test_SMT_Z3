@@ -7,7 +7,7 @@ from compute_min import compute_lmin
 
 # Deadline difficulty is a multiplier over the longest-chain lower bound.
 # Examples: 1.1 hard, 1.3 medium-hard, 1.5 medium, 1.7 easier, 2.0 easy.
-DEFAULT_DIFFICULTY_LEVEL = 1.3
+DEFAULT_DIFFICULTY_LEVEL = 2.0
 
 # ─── Platform (fixed, from example) ───────────────────────────────────────────
 PLATFORM = {
@@ -118,7 +118,8 @@ def generate_json_for_graph(graph, difficulty_level=DEFAULT_DIFFICULTY_LEVEL):
     for task_name in graph["tasks"]:
         gid = local_task_id[task_name]
 
-        k = random.randint(1, 3)
+        # k = random.randint(1, 3)
+        k = 3;
         can_run_on = sorted(random.sample(NON_ROUTER_NODES, k))
 
         jobs.append({

@@ -1,12 +1,15 @@
 import argparse
+from concurrent.futures import ProcessPoolExecutor
 import json
+import math
 import shutil
+import time
 from pathlib import Path
 from z3 import *
 from util.KPathFinding2 import compute_k_paths
 
 # ── module-level setup (safe to run in workers too) ──
-DEFAULT_INPUT_FILE = "input/graph_2.json"
+DEFAULT_INPUT_FILE = "./input/job_stress_test/57_8.json"
 
 
 def load_input(input_path):
@@ -14,46 +17,157 @@ def load_input(input_path):
         return json.load(f)
 
 
-input_file = DEFAULT_INPUT_FILE
-data = load_input(input_file)
+input_file = None
+data = {}
 
-jobs_data      = data["application"]["jobs"]
-messages_data  = data["application"]["messages"]
-platform_nodes = data["platform"]["nodes"]
-app_deadline   = data["application"]["deadline"]
+jobs_data = []
+messages_data = []
+platform_nodes = []
+app_deadline = 0
 
-endsystems = sorted([n["id"] for n in platform_nodes if not n["is_router"]])
-switches   = sorted([n["id"] for n in platform_nodes if     n["is_router"]])
-all_nodes  = endsystems + switches
+endsystems = []
+switches = []
+all_nodes = []
 
-num_endsystems = len(endsystems)
-num_switches   = len(switches)
-num_nodes      = len(all_nodes)
+num_endsystems = 0
+num_switches = 0
+num_nodes = 0
 
-node_to_idx      = {real_id: idx for idx, real_id in enumerate(all_nodes)}
-idx_to_node      = {idx: real_id for real_id, idx  in node_to_idx.items()}
-es_real_to_esidx = {real_id: i   for i, real_id    in enumerate(endsystems)}
+node_to_idx = {}
+idx_to_node = {}
+es_real_to_esidx = {}
 
-adj = [[False] * num_nodes for _ in range(num_nodes)]
-for link in data["platform"].get("links", []):
-    i = node_to_idx[link["start"]]
-    j = node_to_idx[link["end"]]
-    adj[i][j] = True
-    adj[j][i] = True
-
+adj = []
 undirected_links = set()
-for ni in range(num_nodes):
-    for nj in range(num_nodes):
-        if adj[ni][nj]:
-            undirected_links.add((min(ni, nj), max(ni, nj)))
+path_data = {}
+num_jobs = 0
+num_msgs = 0
+node_speed_factors = {}
+ROUTING_OPTIONS_CACHE = {}
 
-path_data = compute_k_paths(input_file, k=1)
-num_jobs  = len(jobs_data)
-num_msgs  = len(messages_data)
+
+
+
+
+def configure_runtime(input_path):
+    global input_file, data, jobs_data, messages_data, platform_nodes, app_deadline
+    global endsystems, switches, all_nodes, num_endsystems, num_switches, num_nodes
+    global node_to_idx, idx_to_node, es_real_to_esidx, adj, undirected_links
+    global path_data, num_jobs, num_msgs, node_speed_factors, ROUTING_OPTIONS_CACHE
+
+    input_file = str(input_path)
+    data = load_input(input_file)
+
+    jobs_data      = data["application"]["jobs"]
+    messages_data  = data["application"]["messages"]
+    platform_nodes = data["platform"]["nodes"]
+    app_deadline   = data["application"]["deadline"]
+
+    endsystems = sorted([n["id"] for n in platform_nodes if not n["is_router"]])
+    switches   = sorted([n["id"] for n in platform_nodes if     n["is_router"]])
+    all_nodes  = endsystems + switches
+
+    num_endsystems = len(endsystems)
+    num_switches   = len(switches)
+    num_nodes      = len(all_nodes)
+
+    node_to_idx      = {real_id: idx for idx, real_id in enumerate(all_nodes)}
+    idx_to_node      = {idx: real_id for real_id, idx  in node_to_idx.items()}
+    es_real_to_esidx = {real_id: i   for i, real_id    in enumerate(endsystems)}
+
+
+
+    path_data = compute_k_paths(input_file, k=1)
+    num_jobs  = len(jobs_data)
+    num_msgs  = len(messages_data)
+    ROUTING_OPTIONS_CACHE = {}
+    node_speed_factors = {
+        node["id"]: node.get("speed_factor", 1)
+        for node in platform_nodes
+        if not node["is_router"]
+    }
+
+
+def normalized_processing_times(job):
+    allowed_nodes = job["can_run_on"]
+    processing_times = job.get("processing_times")
+
+    if isinstance(processing_times, list) and len(processing_times) == len(allowed_nodes):
+        return [math.ceil(value) for value in processing_times]
+    
+
+    # return [
+    #     math.ceil(job["wcet_fullspeed"] * node_speed_factors.get(node_id, 1))
+    #     for node_id in allowed_nodes
+    # ]
+
+
+def job_duration_options(job):
+    return {
+        es_real_to_esidx[node_id]: duration
+        for node_id, duration in zip(job["can_run_on"], job["processing_times"])
+        if node_id in es_real_to_esidx
+    }
+
+
+def job_duration_expr(job_index, assigned_es_expr):
+    options = job_duration_options(jobs_data[job_index])
+    duration = jobs_data[job_index]["wcet_fullspeed"]
+    for es_idx, processing_time in reversed(list(options.items())):
+        duration = If(assigned_es_expr == es_idx, processing_time, duration)
+    return duration
+
+
+def job_duration_on_node(job, real_node):
+    options = dict(zip(job["can_run_on"], normalized_processing_times(job)))
+    return options.get(real_node, job["wcet_fullspeed"])
+
+
+def worker_try_T(T):
+    return try_T(T)
+
+
+def normalize_optimization_options(raw_options):
+    aliases = {
+        "makespan": "makespan",
+        "resource": "resource-usage",
+        "resources": "resource-usage",
+        "resource-usage": "resource-usage",
+        "resource_usage": "resource-usage",
+        "message-wait": "message-wait",
+        "message_wait": "message-wait",
+        "less-message-waiting": "message-wait",
+        "low-latency": "low-latency",
+        "low_latency": "low-latency",
+        "latency": "low-latency",
+        "job-start": "job-start",
+        "job_start": "job-start",
+        "job-start-time": "job-start",
+        "job_start_time": "job-start",
+    }
+    normalized = []
+    for option in raw_options or []:
+        for item in option:
+            key = item.strip().lower()
+            if key not in aliases:
+                raise ValueError(f"Unknown optimization option: {item}")
+            value = aliases[key]
+            if value not in normalized:
+                normalized.append(value)
+    return normalized
+
+
+def max_expr(expressions):
+    if not expressions:
+        return 0
+    result = expressions[-1]
+    for expr in reversed(expressions[:-1]):
+        result = If(expr >= result, expr, result)
+    return result
 
 
 def compute_lmin(jobs_data, messages_data):
-    job_wcet     = {job["id"]: job["wcet_fullspeed"] for job in jobs_data}
+    job_wcet     = {job["id"]: min(normalized_processing_times(job)) for job in jobs_data}
     msg_receiver = {msg["id"]: msg["receiver"]       for msg in messages_data}
     msgs_sent_by = {}
     for msg in messages_data:
@@ -83,7 +197,22 @@ def compute_lmin(jobs_data, messages_data):
                max(job_wcet[jid] for jid in job_wcet))
 
 
+def schedule_makespan(schedule):
+    finish_times = [
+        job["finish_time"]
+        for job in schedule.get("jobs", [])
+    ]
+    arrival_times = [
+        msg["arrive_timeframe"]
+        for msg in schedule.get("messages", [])
+    ]
+    return max(finish_times + arrival_times, default=0)
+
+
 def build_routing_options(sender_job, receiver_job):
+    cache_key = (sender_job, receiver_job)
+    if cache_key in ROUTING_OPTIONS_CACHE:
+        return ROUTING_OPTIONS_CACHE[cache_key]
     
     routing_options = []
     option_counter = 0
@@ -108,6 +237,8 @@ def build_routing_options(sender_job, receiver_job):
             path_key = (src_real, dst_real)
 
             if path_key not in path_data:
+                # an error has to be raised here
+                raise ValueError(f"Path not found for nodes: {path_key}")
                 continue
 
             for path in path_data[path_key]["paths"]:
@@ -132,25 +263,23 @@ def build_routing_options(sender_job, receiver_job):
                 option_counter += 1
                 
    
+    ROUTING_OPTIONS_CACHE[cache_key] = routing_options
     return routing_options
 
 
-def build_and_solve(T):
+def build_and_solve(T, optimization_options=None):
+    optimization_options = optimization_options or []
 
-    solver = Solver()
-    solver.set("timeout", 300000)  # 5 minutes per SMT check
+    solver = Optimize() if optimization_options else Solver()
 
     # ============================================================
     # JOB VARIABLES
     # ============================================================
 
-    job_assigned_es = [
-        Int(f"job_{i}_endsystem")
-        for i in range(num_jobs)
-    ]
-
-    job_start_time = [
-        Int(f"job_{i}_start")
+    job_assigned_es = [Int(f"job_{i}_endsystem") for i in range(num_jobs)]
+    job_start_time = [Int(f"job_{i}_start") for i in range(num_jobs)]
+    job_duration_exprs = [
+        job_duration_expr(i, job_assigned_es[i])
         for i in range(num_jobs)
     ]
 
@@ -158,42 +287,9 @@ def build_and_solve(T):
     # MESSAGE VARIABLES
     # ============================================================
 
-    #
-    # NEW MODEL:
-    #
-    # Instead of msg_position[mid][tf]
-    #
-    # We model:
-    #
-    # hop_time[mid][hop]
-    #
-    # meaning:
-    #
-    # timeframe when message starts traversing hop
-    #
-    # This massively reduces SMT complexity.
-    #
-
-    msg_inject_time = [
-        Int(f"msg_{mid}_inject")
-        for mid in range(num_msgs)
-    ]
-
-    msg_arrival_time = [
-        Int(f"msg_{mid}_arrival")
-        for mid in range(num_msgs)
-    ]
-
-    msg_path_choice = [
-        Int(f"msg_{mid}_path_choice")
-        for mid in range(num_msgs)
-    ]
-
-    #
-    # Per-message hop timing variables
-    #
-    # hop_times[mid] = [ tf0, tf1, tf2 ... ]
-    #
+    msg_inject_time = [Int(f"msg_{mid}_inject") for mid in range(num_msgs)]
+    msg_arrival_time = [Int(f"msg_{mid}_arrival") for mid in range(num_msgs)]
+    msg_path_choice = [Int(f"msg_{mid}_path_choice") for mid in range(num_msgs)]
 
     hop_times = {}
 
@@ -202,399 +298,119 @@ def build_and_solve(T):
     # ============================================================
 
     for i, job in enumerate(jobs_data):
-
-        allowed = [
-            es_real_to_esidx[rid]
-            for rid in job["can_run_on"]
-            if rid in es_real_to_esidx
-        ]
-
-        solver.add(
-            Or([
-                job_assigned_es[i] == x
-                for x in allowed
-            ])
-        )
-
-        wcet = job["wcet_fullspeed"]
-
+        allowed = [es_real_to_esidx[rid] for rid in job["can_run_on"] if rid in es_real_to_esidx]
+        if not allowed: return False, None
+        solver.add(Or([job_assigned_es[i] == x for x in allowed]))
+        duration = job_duration_exprs[i]
         solver.add(job_start_time[i] >= 0)
-        solver.add(job_start_time[i] + wcet <= T)
+        solver.add(job_start_time[i] + duration <= T)
 
     # ============================================================
     # CPU MUTUAL EXCLUSION
     # ============================================================
 
     for i in range(num_jobs):
-
         for j in range(i + 1, num_jobs):
-
-            wcet_i = jobs_data[i]["wcet_fullspeed"]
-            wcet_j = jobs_data[j]["wcet_fullspeed"]
-
+            duration_i = job_duration_exprs[i]
+            duration_j = job_duration_exprs[j]
             solver.add(
                 Implies(
                     job_assigned_es[i] == job_assigned_es[j],
                     Or(
-                        job_start_time[i] + wcet_i <= job_start_time[j],
-                        job_start_time[j] + wcet_j <= job_start_time[i]
+                        job_start_time[i] + duration_i <= job_start_time[j],
+                        job_start_time[j] + duration_j <= job_start_time[i]
                     )
                 )
             )
 
-    # ============================================================
-    # STORE CANDIDATE EDGE USAGES
-    # ============================================================
-
-    #
-    # edge_usage[(ni, nj)] = [(mid, rid, hop_time), ...]
-    #
-    # Later we add pairwise constraints:
-    # if two selected route hops use the same edge, their hop times differ.
-    #
-    # This avoids creating one Boolean expression per edge per timeframe.
-    #
-
     edge_usage = {}
-    node_usage = {}
-
     # ============================================================
     # MESSAGE ROUTING
     # ============================================================
 
+    message_wait_terms = []
     for msg in messages_data:
-
         mid = msg["id"]
-
-        sender_job = msg["sender"]
+        sender_job = msg["sender"]  
         receiver_job = msg["receiver"]
-
-        sender_wcet = jobs_data[sender_job]["wcet_fullspeed"]
-
-        # --------------------------------------------------------
-        # COLLECT VALID ROUTES
-        # --------------------------------------------------------
+        sender_duration = job_duration_exprs[sender_job]
 
         routing_options = build_routing_options(sender_job, receiver_job)
-        
+        if not routing_options: return False, None
 
-        if not routing_options:
-            return False, None
+        solver.add(Or([msg_path_choice[mid] == rid for (rid, _, _, _) in routing_options]))
 
-        # --------------------------------------------------------
-        # path choice domain
-        # --------------------------------------------------------
-
-        solver.add(
-            Or([
-                msg_path_choice[mid] == rid
-                for (rid, _, _, _) in routing_options
-            ])
-        )
-
-        # --------------------------------------------------------
-        # injection constraints
-        # --------------------------------------------------------
-
-        solver.add(
-            msg_inject_time[mid]
-            >=
-            job_start_time[sender_job] + sender_wcet
-        )
-
-        solver.add(msg_inject_time[mid] >= 0)
+        solver.add(msg_inject_time[mid] >= job_start_time[sender_job] + sender_duration)
         solver.add(msg_inject_time[mid] < T)
-
-        solver.add(msg_arrival_time[mid] >= 0)
+        solver.add(msg_arrival_time[mid] >= msg_inject_time[mid])
         solver.add(msg_arrival_time[mid] < T)
 
-        # --------------------------------------------------------
-        # ROUTING CASES
-        # --------------------------------------------------------
-
         routing_cases = []
-
-        for (
-            rid,
-            src_es_idx,
-            dst_es_idx,
-            path_nodes
-        ) in routing_options:
-
-            conds = []
-
-            # ----------------------------------------------------
-            # assignment consistency
-            # ----------------------------------------------------
-
-            conds.append(
-                job_assigned_es[sender_job]
-                ==
-                src_es_idx
-            )
-
-            conds.append(
-                job_assigned_es[receiver_job]
-                ==
-                dst_es_idx
-            )
-
-            conds.append(
+        for (rid, src_es_idx, dst_es_idx, path_nodes) in routing_options:
+            conds = [
+                job_assigned_es[sender_job] == src_es_idx,
+                job_assigned_es[receiver_job] == dst_es_idx,
                 msg_path_choice[mid] == rid
-            )
-
-            # ----------------------------------------------------
-            # PATH
-            # ----------------------------------------------------
-
+            ]
             num_hops = len(path_nodes) - 1
-
-            #
-            # create hop timing vars
-            #
-
             local_hop_times = []
-
             for hop in range(num_hops):
-
                 hvar = Int(f"msg_{mid}_hop_{rid}_{hop}")
-
                 local_hop_times.append(hvar)
-
-                solver.add(hvar >= 0)
-                solver.add(hvar < T)
-
+                solver.add(hvar >= 0, hvar < T)
             hop_times[(mid, rid)] = local_hop_times
 
-            # ----------------------------------------------------
-            # first hop starts at inject time
-            # ----------------------------------------------------
+            if num_hops > 0: conds.append(local_hop_times[0] == msg_inject_time[mid])
+            for h in range(num_hops - 1): conds.append(local_hop_times[h + 1] >= local_hop_times[h] + 1)
+            
+            route_wait = Sum([local_hop_times[h + 1] - local_hop_times[h] - 1 for h in range(num_hops - 1)]) if num_hops > 1 else 0
+            message_wait_terms.append(If(msg_path_choice[mid] == rid, route_wait, 0))
 
-            if num_hops > 0:
-
-                conds.append(
-                    local_hop_times[0]
-                    ==
-                    msg_inject_time[mid]
-                )
-
-            # ----------------------------------------------------
-            # hops ordered
-            # ----------------------------------------------------
-
-            #
-            # each hop takes 1 timeframe
-            #
-            # but may wait if wire busy
-            #
-
-            for h in range(num_hops - 1):
-
-                conds.append(
-                    local_hop_times[h + 1]
-                    >=
-                    local_hop_times[h] + 1
-                )
-
-            # ----------------------------------------------------
-            # arrival time
-            # ----------------------------------------------------
-
-            if num_hops > 0:
-
-                conds.append(
-                    msg_arrival_time[mid]
-                    ==
-                    local_hop_times[-1] + 1
-                )
-
-            else:
-
-                conds.append(
-                    msg_arrival_time[mid]
-                    ==
-                    msg_inject_time[mid]
-                )
-
-            # ----------------------------------------------------
-            # receiver waits
-            # ----------------------------------------------------
-
-            conds.append(
-                job_start_time[receiver_job]
-                >=
-                msg_arrival_time[mid]
-            )
-
-            # ----------------------------------------------------
-            # REGISTER EDGE USAGE
-            # ----------------------------------------------------
+            conds.append(msg_arrival_time[mid] == (local_hop_times[-1] + 1 if num_hops > 0 else msg_inject_time[mid]))
+            conds.append(job_start_time[receiver_job] >= msg_arrival_time[mid])
 
             for h in range(num_hops):
-
-                ni = path_nodes[h]
-                nj = path_nodes[h + 1]
-
-                edge = (
-                    min(ni, nj),
-                    max(ni, nj)
-                )
-
-                if edge not in edge_usage:
-                    edge_usage[edge] = []
-
-                edge_usage[edge].append(
-                    (
-                        mid,
-                        rid,
-                        local_hop_times[h]
-                    )
-                )
-
-            # ----------------------------------------------------
-            # REGISTER NODE OCCUPANCY
-            # ----------------------------------------------------
-
-            #
-            # A message occupies:
-            # - the source node at inject time,
-            # - each intermediate node from arrival until next departure,
-            # - the destination node at arrival time.
-            #
-            # Intervals are inclusive over integer timeframes.
-            #
-
-            if num_hops == 0:
-
-                node_intervals = [
-                    (
-                        path_nodes[0],
-                        msg_inject_time[mid],
-                        msg_inject_time[mid]
-                    )
-                ]
-
-            else:
-
-                node_intervals = [
-                    (
-                        path_nodes[0],
-                        msg_inject_time[mid],
-                        local_hop_times[0]
-                    )
-                ]
-
-                for node_pos in range(1, len(path_nodes) - 1):
-
-                    node_intervals.append(
-                        (
-                            path_nodes[node_pos],
-                            local_hop_times[node_pos - 1] + 1,
-                            local_hop_times[node_pos]
-                        )
-                    )
-
-                node_intervals.append(
-                    (
-                        path_nodes[-1],
-                        msg_arrival_time[mid],
-                        msg_arrival_time[mid]
-                    )
-                )
-
-            for node_idx, start_expr, end_expr in node_intervals:
-
-                if node_idx not in node_usage:
-                    node_usage[node_idx] = []
-
-                node_usage[node_idx].append(
-                    (
-                        mid,
-                        rid,
-                        start_expr,
-                        end_expr
-                    )
-                )
-
-            routing_cases.append(
-                And(conds)
-            )
-
-        solver.add(
-            Or(routing_cases)
-        )
+                edge = (min(path_nodes[h], path_nodes[h+1]), max(path_nodes[h], path_nodes[h+1]))
+                if edge not in edge_usage: edge_usage[edge] = []
+                edge_usage[edge].append((mid, rid, local_hop_times[h]))
+            routing_cases.append(And(conds))
+        solver.add(Or(routing_cases))
 
     # ============================================================
     # WIRE CONTENTION
     # ============================================================
 
     for key, users in edge_usage.items():
-
         for i in range(len(users)):
-
             mid_i, rid_i, hop_time_i = users[i]
-
             for j in range(i + 1, len(users)):
+                mid_j, rid_j, hop_time_j = users[j]   
+                if mid_i == mid_j: continue
+                solver.add(Implies(And(msg_path_choice[mid_i] == rid_i, msg_path_choice[mid_j] == rid_j), hop_time_i != hop_time_j))
 
-                mid_j, rid_j, hop_time_j = users[j]
-
-                if mid_i == mid_j:
-                    continue
-
-                solver.add(
-                    Implies(
-                        And(
-                            msg_path_choice[mid_i] == rid_i,
-                            msg_path_choice[mid_j] == rid_j
-                        ),
-                        hop_time_i != hop_time_j
-                    )
-                )
-
-    # ============================================================
-    # NODE CONTENTION
-    # ============================================================
-
-    for key, users in node_usage.items():
-
-        for i in range(len(users)):
-
-            mid_i, rid_i, start_i, end_i = users[i]
-
-            for j in range(i + 1, len(users)):
-
-                mid_j, rid_j, start_j, end_j = users[j]
-
-                if mid_i == mid_j:
-                    continue
-
-                solver.add(
-                    Implies(
-                        And(
-                            msg_path_choice[mid_i] == rid_i,
-                            msg_path_choice[mid_j] == rid_j
-                        ),
-                        Or(
-                            end_i < start_j,
-                            end_j < start_i
-                        )
-                    )
-                )
-
-    # ============================================================
-    # SOLVE
-    # ============================================================
+    if optimization_options:
+        job_finish_exprs = [job_start_time[i] + job_duration_exprs[i] for i in range(num_jobs)]
+        message_latency_terms = [msg_arrival_time[mid] - msg_inject_time[mid] for mid in range(num_msgs)]
+        for option in optimization_options:
+            if option == "makespan":
+                schedule_makespan = Int("optimized_schedule_makespan")
+                solver.add(schedule_makespan >= 0, schedule_makespan <= T)
+                for f in job_finish_exprs: solver.add(schedule_makespan >= f)
+                for a in msg_arrival_time: solver.add(schedule_makespan >= a)
+                solver.minimize(schedule_makespan)
+            elif option == "resource-usage": solver.minimize(Sum(job_duration_exprs))
+            elif option == "message-wait": solver.minimize(Sum(message_wait_terms) if message_wait_terms else 0)
+            elif option == "low-latency": solver.minimize(Sum(message_latency_terms) if message_latency_terms else 0)
+            elif option == "job-start": solver.minimize(Sum(job_start_time) if job_start_time else 0)
 
     result = solver.check()
-
-    if result != sat:
-        return False, None
-
+    if result != sat: return False, None
     return True, solver.model()
 
-def try_T(T):
 
-    feasible, model = build_and_solve(T)
+def try_T(T, optimization_options=None):
+
+    feasible, model = build_and_solve(T, optimization_options)
 
     if not feasible:
         return T, False, None
@@ -625,14 +441,15 @@ def try_T(T):
             Int(f"job_{i}_start")
         ].as_long()
 
-        wcet = job["wcet_fullspeed"]
+        processing_time = job_duration_on_node(job, real_node)
 
         job_info[job["id"]] = {
             "job_id": job["id"],
             "assigned_node": real_node,
             "start_time": start_time,
-            "finish_time": start_time + wcet,
-            "wcet": wcet,
+            "finish_time": start_time + processing_time,
+            "wcet": job["wcet_fullspeed"],
+            "processing_time": processing_time,
             "dependencies": job_dependencies[job["id"]],
         }
 
@@ -753,44 +570,28 @@ if __name__ == "__main__":
         "--output-file",
         help="Optional path where the generated schedule JSON should be copied.",
     )
+    parser.add_argument(
+        "--optimize",
+        nargs="+",
+        action="append",
+        metavar="OBJECTIVE",
+        help=(
+            "Optional final optimization pass after the best T is found. "
+            "Choices: makespan, resource-usage, message-wait, low-latency, job-start."
+        ),
+    )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        help="Number of parallel workers for makespan search."
+    )
     args = parser.parse_args()
+    optimization_options = normalize_optimization_options(args.optimize)
+    scheduler_started_at = time.perf_counter()
 
     input_file = args.input_file
-    data = load_input(input_file)
-
-    jobs_data      = data["application"]["jobs"]
-    messages_data  = data["application"]["messages"]
-    platform_nodes = data["platform"]["nodes"]
-    app_deadline   = data["application"]["deadline"]
-
-    endsystems = sorted([n["id"] for n in platform_nodes if not n["is_router"]])
-    switches   = sorted([n["id"] for n in platform_nodes if     n["is_router"]])
-    all_nodes  = endsystems + switches
-
-    num_endsystems = len(endsystems)
-    num_switches   = len(switches)
-    num_nodes      = len(all_nodes)
-
-    node_to_idx      = {real_id: idx for idx, real_id in enumerate(all_nodes)}
-    idx_to_node      = {idx: real_id for real_id, idx  in node_to_idx.items()}
-    es_real_to_esidx = {real_id: i   for i, real_id    in enumerate(endsystems)}
-
-    adj = [[False] * num_nodes for _ in range(num_nodes)]
-    for link in data["platform"].get("links", []):
-        i = node_to_idx[link["start"]]
-        j = node_to_idx[link["end"]]
-        adj[i][j] = True
-        adj[j][i] = True
-
-    undirected_links = set()
-    for ni in range(num_nodes):
-        for nj in range(num_nodes):
-            if adj[ni][nj]:
-                undirected_links.add((min(ni, nj), max(ni, nj)))
-
-    path_data = compute_k_paths(input_file, k=1)
-    num_jobs  = len(jobs_data)
-    num_msgs  = len(messages_data)
+    configure_runtime(input_file)
 
     l_min = compute_lmin(jobs_data, messages_data)
     t_max = app_deadline
@@ -801,77 +602,114 @@ if __name__ == "__main__":
     high = t_max
     best_schedule = None
     optimal_T     = None
+    NUM_WORKERS   = args.workers
 
-    print(f"Search range: T = {low} to {high}")
-    NUM_WORKERS = 1
+    with ProcessPoolExecutor(
+        max_workers=NUM_WORKERS,
+        initializer=configure_runtime,
+        initargs=(input_file,),
+    ) as executor:
+        while low <= high:
+            mid = (low + high) // 2
 
-    while low <= high:
-        mid = (low + high) // 2
+            # build a contiguous candidate block centered near mid
+            half = NUM_WORKERS // 2
+            a = max(low, mid - half)
+            b = min(high, a + NUM_WORKERS - 1)
 
-        # build a contiguous candidate block centered near mid
-        half = NUM_WORKERS // 2
-        a = max(low, mid - half)
-        b = min(high, a + NUM_WORKERS - 1)
+            candidates = list(range(a, b + 1))
+            t_label = f"T = {candidates[0]}" if len(candidates) == 1 else f"T = {candidates}"
+            print(f"Checking {t_label} for feasibility...", flush=True)
 
-        candidates = list(range(a, b + 1))
-        print(f"Trying T candidates: {candidates} ...")
+            step_started_at = time.perf_counter()
+            results = list(executor.map(worker_try_T, candidates))
+            step_seconds = time.perf_counter() - step_started_at
 
-        results = [try_T(candidate) for candidate in candidates]
+            # collect SAT results
+            sat_ts = [t for (t, feasible, sched) in results if feasible]
 
-        # collect SAT results
-        sat_ts = [t for (t, feasible, sched) in results if feasible]
+            if sat_ts:
+                t_sat = min(sat_ts)
+                print(f"Feasible schedule found at T = {t_sat} (took {step_seconds:.2f}s to finish)", flush=True)
 
-        if sat_ts:
-            t_sat = min(sat_ts)
-            print(f"  SAT found at T = {t_sat}")
+                # store schedule for smallest SAT found
+                for (t, feasible, sched) in results:
+                    if t == t_sat and feasible:
+                        optimal_T = t_sat
+                        best_schedule = sched
+                        break
 
-            # store schedule for smallest SAT found
-            for (t, feasible, sched) in results:
-                if t == t_sat and feasible:
-                    optimal_T = t_sat
-                    best_schedule = sched
-                    break
+                # narrow search to values < t_sat
+                high = t_sat - 1
+            else:
+                print(f"No feasible schedule for {t_label} (took {step_seconds:.2f}s to finish)", flush=True)
+                # all tested were UNSAT -> advance lower bound
+                low = b + 1
 
-            # narrow search to values < t_sat
-            high = t_sat - 1
-        else:
-            print(f"  No SAT in range {a}..{b}")
-            # all tested were UNSAT -> advance lower bound
-            low = b + 1
+    scheduler_seconds = time.perf_counter() - scheduler_started_at
 
     if best_schedule is not None:
-        print(f"\nOptimal T = {optimal_T} -- stopping search.")
+        optimized_output_file = None
+        final_optimization_options = list(optimization_options)
+        if "makespan" not in final_optimization_options:
+            final_optimization_options.insert(0, "makespan")
+
+        if final_optimization_options:
+            _, optimized, optimized_schedule = try_T(
+                optimal_T,
+                optimization_options=final_optimization_options,
+            )
+            if optimized:
+                best_schedule = optimized_schedule
+            scheduler_seconds = time.perf_counter() - scheduler_started_at
+
+        final_makespan = schedule_makespan(best_schedule)
+        deadline_satisfied = final_makespan < app_deadline
 
         output = {
-            "optimal_makespan": optimal_T,
+            "sat": deadline_satisfied,
+            "optimal_makespan": final_makespan,
+            "optimal_time_horizon": optimal_T,
+            "application_deadline": app_deadline,
+            "deadline_satisfied": deadline_satisfied,
+            "schedule_calculation_seconds": round(scheduler_seconds, 6),
+            "optimizations": optimization_options,
+            "internal_optimizations": final_optimization_options,
             "schedule":         best_schedule,
         }
         base_name   = Path(input_file).stem
-        output_file = f"output/{base_name}_smt_output.json"
+        output_dir = Path("output")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_file = output_dir / f"{base_name}_smt_output.json"
         with open(output_file, "w") as f:
             json.dump(output, f, indent=4)
-        print(f"Schedule written to {output_file}")
 
+        if optimization_options:
+            optimized_suffix = "_".join(optimization_options).replace("-", "_")
+            optimized_output_file = output_dir / f"{base_name}_smt_optimized_{optimized_suffix}.json"
+            with open(optimized_output_file, "w") as f:
+                json.dump(output, f, indent=4)
+
+        scheduled_output_file = str(output_file)
         if args.output_file:
+            out_path = Path(args.output_file)
+            out_path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(output_file, args.output_file)
-            print(f"Schedule copied to {args.output_file}")
+            scheduled_output_file = str(args.output_file)
 
-        # ── Pretty-print summary to console ──
-        print(f"\n{'='*60}")
-        print(f"Optimal makespan T = {optimal_T}")
-        print(f"{'='*60}")
+            if optimization_options:
+                output_path = Path(args.output_file)
+                copied_optimized_output = output_path.with_name(
+                    f"{output_path.stem}_optimized_{optimized_suffix}{output_path.suffix}"
+                )
+                shutil.copyfile(optimized_output_file, copied_optimized_output)
 
-        print("\nJOB SCHEDULE:")
-        for job in best_schedule["jobs"]:
-            print(f"  Job {job['job_id']:>2} | node {job['assigned_node']:>3} | "
-                  f"start={job['start_time']:>3}  finish={job['finish_time']:>3}  wcet={job['wcet']}")
-
-        print("\nMESSAGE DETAILS:")
-        for msg in best_schedule["messages"]:
-            print(f"  Msg {msg['msg_id']:>2} | {msg['sender_node']} -> {msg['receiver_node']} | "
-                  f"inject@tf={msg['inject_timeframe']}  arrive@tf={msg['arrive_timeframe']}")
-
-      
-
+        print(f"Total time: {scheduler_seconds:.2f} seconds")
+        print(f"Final makespan: {final_makespan}")
+        print(f"Application deadline: {app_deadline}")
+        print(f"SAT found: {'Yes' if deadline_satisfied else 'No'}")
+        print(f"Saved file location: {scheduled_output_file}")
     else:
-        print("No feasible schedule exists within the application deadline.")
+        print(f"Total time: {scheduler_seconds:.2f} seconds")
+        print(f"Application deadline: {app_deadline}")
+        print("SAT found: No")

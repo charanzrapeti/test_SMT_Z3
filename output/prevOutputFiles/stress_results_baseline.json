@@ -1,0 +1,12 @@
+[
+    {
+        "status": "failed",
+        "elapsed_seconds": 4.757580200006487,
+        "makespan": null,
+        "stdout_tail": "Search range: T = 604 to 894\nTrying T candidates: [750] ...\n",
+        "stderr_tail": "bove exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"D:\\masters\\project_work\\test_code\\test2Parallize_optimized.py\", line 1133, in <module>\n    results = list(executor.map(worker_try_T, candidates))\n  File \"C:\\Python314\\Lib\\concurrent\\futures\\process.py\", line 617, in _chain_from_iterable_of_lists\n    for element in iterable:\n                   ^^^^^^^^\n  File \"C:\\Python314\\Lib\\concurrent\\futures\\_base.py\", line 639, in result_iterator\n    yield _result_or_cancel(fs.pop())\n          ~~~~~~~~~~~~~~~~~^^^^^^^^^^\n  File \"C:\\Python314\\Lib\\concurrent\\futures\\_base.py\", line 311, in _result_or_cancel\n    return fut.result(timeout)\n           ~~~~~~~~~~^^^^^^^^^\n  File \"C:\\Python314\\Lib\\concurrent\\futures\\_base.py\", line 450, in result\n    return self.__get_result()\n           ~~~~~~~~~~~~~~~~~^^\n  File \"C:\\Python314\\Lib\\concurrent\\futures\\_base.py\", line 395, in __get_result\n    raise self._exception\nNameError: name 'msg' is not defined\n",
+        "file": "55_10_input.json",
+        "tasks": 55,
+        "messages": 10
+    }
+]
