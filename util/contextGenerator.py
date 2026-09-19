@@ -154,10 +154,10 @@ if __name__ == "__main__":
 
     generate_context(
         total_events=13,
-        proc_failures=5,
+        proc_failures=1,
         router_failures=4,
-        slack_events=4,
-        input_file=Path(__file__).resolve().parent.parent / "input" / "graph_1 - input.json",
+        slack_events=8,
+        input_file=Path(__file__).resolve().parent.parent / "newInputFiles" /  "100Tasks.json",
 
         proc_failure_nodes=[
           
