@@ -253,7 +253,7 @@ def build_and_solve(T, optimization_options=None):
     optimization_options = optimization_options or []
 
     solver = Optimize() if optimization_options else Solver()
-    solver.set("timeout", 1800000)
+    # solver.set("timeout", 1800000)
 
     # ============================================================
     # JOB VARIABLES
