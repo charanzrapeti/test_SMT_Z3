@@ -43,6 +43,7 @@ path_data = {}
 num_jobs = 0
 num_msgs = 0
 node_speed_factors = {}
+ROUTING_OPTIONS_CACHE = {}
 
 
 
@@ -52,7 +53,7 @@ def configure_runtime(input_path):
     global input_file, data, jobs_data, messages_data, platform_nodes, app_deadline
     global endsystems, switches, all_nodes, num_endsystems, num_switches, num_nodes
     global node_to_idx, idx_to_node, es_real_to_esidx, adj, undirected_links
-    global path_data, num_jobs, num_msgs, node_speed_factors
+    global path_data, num_jobs, num_msgs, node_speed_factors, ROUTING_OPTIONS_CACHE
 
     input_file = str(input_path)
     data = load_input(input_file)
@@ -79,6 +80,7 @@ def configure_runtime(input_path):
     path_data = compute_k_paths(input_file, k=1)
     num_jobs  = len(jobs_data)
     num_msgs  = len(messages_data)
+    ROUTING_OPTIONS_CACHE = {}
     node_speed_factors = {
         node["id"]: node.get("speed_factor", 1)
         for node in platform_nodes
@@ -195,7 +197,22 @@ def compute_lmin(jobs_data, messages_data):
                max(job_wcet[jid] for jid in job_wcet))
 
 
+def schedule_makespan(schedule):
+    finish_times = [
+        job["finish_time"]
+        for job in schedule.get("jobs", [])
+    ]
+    arrival_times = [
+        msg["arrive_timeframe"]
+        for msg in schedule.get("messages", [])
+    ]
+    return max(finish_times + arrival_times, default=0)
+
+
 def build_routing_options(sender_job, receiver_job):
+    cache_key = (sender_job, receiver_job)
+    if cache_key in ROUTING_OPTIONS_CACHE:
+        return ROUTING_OPTIONS_CACHE[cache_key]
     
     routing_options = []
     option_counter = 0
@@ -246,6 +263,7 @@ def build_routing_options(sender_job, receiver_job):
                 option_counter += 1
                 
    
+    ROUTING_OPTIONS_CACHE[cache_key] = routing_options
     return routing_options
 
 
@@ -253,7 +271,6 @@ def build_and_solve(T, optimization_options=None):
     optimization_options = optimization_options or []
 
     solver = Optimize() if optimization_options else Solver()
-    # solver.set("timeout", 1800000)
 
     # ============================================================
     # JOB VARIABLES
@@ -261,6 +278,10 @@ def build_and_solve(T, optimization_options=None):
 
     job_assigned_es = [Int(f"job_{i}_endsystem") for i in range(num_jobs)]
     job_start_time = [Int(f"job_{i}_start") for i in range(num_jobs)]
+    job_duration_exprs = [
+        job_duration_expr(i, job_assigned_es[i])
+        for i in range(num_jobs)
+    ]
 
     # ============================================================
     # MESSAGE VARIABLES
@@ -280,7 +301,7 @@ def build_and_solve(T, optimization_options=None):
         allowed = [es_real_to_esidx[rid] for rid in job["can_run_on"] if rid in es_real_to_esidx]
         if not allowed: return False, None
         solver.add(Or([job_assigned_es[i] == x for x in allowed]))
-        duration = job_duration_expr(i, job_assigned_es[i])
+        duration = job_duration_exprs[i]
         solver.add(job_start_time[i] >= 0)
         solver.add(job_start_time[i] + duration <= T)
 
@@ -290,8 +311,8 @@ def build_and_solve(T, optimization_options=None):
 
     for i in range(num_jobs):
         for j in range(i + 1, num_jobs):
-            duration_i = job_duration_expr(i, job_assigned_es[i])
-            duration_j = job_duration_expr(j, job_assigned_es[j])
+            duration_i = job_duration_exprs[i]
+            duration_j = job_duration_exprs[j]
             solver.add(
                 Implies(
                     job_assigned_es[i] == job_assigned_es[j],
@@ -312,7 +333,7 @@ def build_and_solve(T, optimization_options=None):
         mid = msg["id"]
         sender_job = msg["sender"]  
         receiver_job = msg["receiver"]
-        sender_duration = job_duration_expr(sender_job, job_assigned_es[sender_job])
+        sender_duration = job_duration_exprs[sender_job]
 
         routing_options = build_routing_options(sender_job, receiver_job)
         if not routing_options: return False, None
@@ -368,7 +389,7 @@ def build_and_solve(T, optimization_options=None):
                 solver.add(Implies(And(msg_path_choice[mid_i] == rid_i, msg_path_choice[mid_j] == rid_j), hop_time_i != hop_time_j))
 
     if optimization_options:
-        job_finish_exprs = [job_start_time[i] + job_duration_expr(i, job_assigned_es[i]) for i in range(num_jobs)]
+        job_finish_exprs = [job_start_time[i] + job_duration_exprs[i] for i in range(num_jobs)]
         message_latency_terms = [msg_arrival_time[mid] - msg_inject_time[mid] for mid in range(num_msgs)]
         for option in optimization_options:
             if option == "makespan":
@@ -377,7 +398,7 @@ def build_and_solve(T, optimization_options=None):
                 for f in job_finish_exprs: solver.add(schedule_makespan >= f)
                 for a in msg_arrival_time: solver.add(schedule_makespan >= a)
                 solver.minimize(schedule_makespan)
-            elif option == "resource-usage": solver.minimize(Sum([job_duration_expr(i, job_assigned_es[i]) for i in range(num_jobs)]))
+            elif option == "resource-usage": solver.minimize(Sum(job_duration_exprs))
             elif option == "message-wait": solver.minimize(Sum(message_wait_terms) if message_wait_terms else 0)
             elif option == "low-latency": solver.minimize(Sum(message_latency_terms) if message_latency_terms else 0)
             elif option == "job-start": solver.minimize(Sum(job_start_time) if job_start_time else 0)
@@ -598,7 +619,7 @@ if __name__ == "__main__":
 
             candidates = list(range(a, b + 1))
             t_label = f"T = {candidates[0]}" if len(candidates) == 1 else f"T = {candidates}"
-            print(f"Checking {t_label} for SAT...", flush=True)
+            print(f"Checking {t_label} for feasibility...", flush=True)
 
             step_started_at = time.perf_counter()
             results = list(executor.map(worker_try_T, candidates))
@@ -609,7 +630,7 @@ if __name__ == "__main__":
 
             if sat_ts:
                 t_sat = min(sat_ts)
-                print(f"SAT found at T = {t_sat} (took {step_seconds:.2f}s to finish)", flush=True)
+                print(f"Feasible schedule found at T = {t_sat} (took {step_seconds:.2f}s to finish)", flush=True)
 
                 # store schedule for smallest SAT found
                 for (t, feasible, sched) in results:
@@ -621,7 +642,7 @@ if __name__ == "__main__":
                 # narrow search to values < t_sat
                 high = t_sat - 1
             else:
-                print(f"UNSAT for {t_label} (took {step_seconds:.2f}s to finish)", flush=True)
+                print(f"No feasible schedule for {t_label} (took {step_seconds:.2f}s to finish)", flush=True)
                 # all tested were UNSAT -> advance lower bound
                 low = b + 1
 
@@ -629,19 +650,31 @@ if __name__ == "__main__":
 
     if best_schedule is not None:
         optimized_output_file = None
-        if optimization_options:
+        final_optimization_options = list(optimization_options)
+        if "makespan" not in final_optimization_options:
+            final_optimization_options.insert(0, "makespan")
+
+        if final_optimization_options:
             _, optimized, optimized_schedule = try_T(
                 optimal_T,
-                optimization_options=optimization_options,
+                optimization_options=final_optimization_options,
             )
             if optimized:
                 best_schedule = optimized_schedule
             scheduler_seconds = time.perf_counter() - scheduler_started_at
 
+        final_makespan = schedule_makespan(best_schedule)
+        deadline_satisfied = final_makespan < app_deadline
+
         output = {
-            "optimal_makespan": optimal_T,
+            "sat": deadline_satisfied,
+            "optimal_makespan": final_makespan,
+            "optimal_time_horizon": optimal_T,
+            "application_deadline": app_deadline,
+            "deadline_satisfied": deadline_satisfied,
             "schedule_calculation_seconds": round(scheduler_seconds, 6),
             "optimizations": optimization_options,
+            "internal_optimizations": final_optimization_options,
             "schedule":         best_schedule,
         }
         base_name   = Path(input_file).stem
@@ -672,9 +705,11 @@ if __name__ == "__main__":
                 shutil.copyfile(optimized_output_file, copied_optimized_output)
 
         print(f"Total time: {scheduler_seconds:.2f} seconds")
-        print("SAT found: Yes")
+        print(f"Final makespan: {final_makespan}")
+        print(f"Application deadline: {app_deadline}")
+        print(f"SAT found: {'Yes' if deadline_satisfied else 'No'}")
         print(f"Saved file location: {scheduled_output_file}")
     else:
         print(f"Total time: {scheduler_seconds:.2f} seconds")
+        print(f"Application deadline: {app_deadline}")
         print("SAT found: No")
-

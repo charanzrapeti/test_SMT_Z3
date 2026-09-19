@@ -6,6 +6,11 @@ import sys
 import math
 from pathlib import Path
 
+try:
+    from .deadline_calculator import calculate_application_deadline
+except ImportError:
+    from deadline_calculator import calculate_application_deadline
+
 # Optional: only needed if you want to use compute_lmin().
 # The current version uses the TGFF hard deadline directly.
 # from compute_min import compute_lmin
@@ -17,8 +22,8 @@ from pathlib import Path
 
 RANDOM_SEED = 42
 
-# Application deadline = hard deadline * this factor
-DEADLINE_FACTOR = 1.5
+# Deadline looseness used by util/deadline_calculator.py.
+DEADLINE_ALPHA = 0.5
 
 def convert_platform(json_path):
     """
@@ -466,36 +471,6 @@ def select_messages(graph, selected_tasks, requested_message_count):
 # Deadline
 # ─────────────────────────────────────────────────────────────────────────────
 
-def application_deadline(graph):
-    """
-    Use the maximum hard deadline from the TGFF graph.
-
-    Application deadline:
-
-        ceil(max_hard_deadline * 1.5)
-
-    Example:
-
-        hard deadline = 900
-        application deadline = ceil(900 * 1.5)
-                            = 1350
-    """
-
-    if not graph["hard_deadlines"]:
-        raise ValueError(
-            f"Graph {graph['id']} has no HARD_DEADLINE entries."
-        )
-
-    max_hard_deadline = max(
-        item["deadline"]
-        for item in graph["hard_deadlines"]
-    )
-
-    return math.ceil(
-        max_hard_deadline * DEADLINE_FACTOR
-    )
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # JSON generation
 # ─────────────────────────────────────────────────────────────────────────────
@@ -598,7 +573,11 @@ def generate_json_for_graph(
 
     # ── Deadline ─────────────────────────────────────────────────────────────
 
-    deadline = application_deadline(graph)
+    deadline = calculate_application_deadline(
+        jobs,
+        messages,
+        alpha=DEADLINE_ALPHA
+    )
 
     # ── Final JSON ───────────────────────────────────────────────────────────
 
