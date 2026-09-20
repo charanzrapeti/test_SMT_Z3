@@ -9,9 +9,9 @@ from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent
 CONTEXT_FILE = ROOT_DIR / "context" / "context.json"
-BASE_INPUT_FILE = ROOT_DIR / "context" / "inputFiles" / "20_6.json"
-EVENT_INPUT_DIR = ROOT_DIR / "input"
-EVENT_SCHEDULE_DIR = ROOT_DIR / "prevSchedules" / "contextSchedules"
+BASE_INPUT_FILE = ROOT_DIR / "newInputFiles" /  "100Tasks.json"
+EVENT_INPUT_DIR = ROOT_DIR / "context" / "inputFiles"
+EVENT_SCHEDULE_DIR = ROOT_DIR / "context" / "contextSchedules"
 SCHEDULER_LOG_DIR = ROOT_DIR / "context" / "schedulerLogs"
 SCHEDULER_FILE = ROOT_DIR / "test2Parallize.py"
 

@@ -882,8 +882,8 @@ if __name__ == "__main__":
     if best_schedule is not None:
         optimized_output_file = None
         final_optimization_options = list(optimization_options)
-        if "makespan" not in final_optimization_options:
-            final_optimization_options.insert(0, "makespan")
+        # if "makespan" not in final_optimization_options:
+        #     final_optimization_options.insert(0, "makespan")
 
         if final_optimization_options:
             optimization_result = try_T(
