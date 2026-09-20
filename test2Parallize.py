@@ -44,18 +44,21 @@ num_jobs = 0
 num_msgs = 0
 node_speed_factors = {}
 ROUTING_OPTIONS_CACHE = {}
+SMT_LOG_ENABLED = False
 
 
 
 
 
-def configure_runtime(input_path):
+def configure_runtime(input_path, log_enabled=False):
     global input_file, data, jobs_data, messages_data, platform_nodes, app_deadline
     global endsystems, switches, all_nodes, num_endsystems, num_switches, num_nodes
     global node_to_idx, idx_to_node, es_real_to_esidx, adj, undirected_links
     global path_data, num_jobs, num_msgs, node_speed_factors, ROUTING_OPTIONS_CACHE
+    global SMT_LOG_ENABLED
 
     input_file = str(input_path)
+    SMT_LOG_ENABLED = log_enabled
     data = load_input(input_file)
 
     jobs_data      = data["application"]["jobs"]
@@ -86,6 +89,122 @@ def configure_runtime(input_path):
         for node in platform_nodes
         if not node["is_router"]
     }
+
+
+class SmtBuildStats:
+    def __init__(self, T, optimization_options=None):
+        self.T = T
+        self.optimization_options = optimization_options or []
+        self.variables = 0
+        self.constraints = 0
+        self.phase_constraints = {}
+        self.routing_options = 0
+        self.hop_variables = 0
+        self.edge_users = 0
+        self.wire_contention_checks = 0
+        self.result = None
+        self.build_seconds = 0.0
+        self.check_seconds = 0.0
+        self.z3_stats = {}
+        self._started_at = time.perf_counter()
+
+    def add_variables(self, count, label=None):
+        self.variables += count
+        if label == "hop":
+            self.hop_variables += count
+
+    def add_constraints(self, solver, phase, *constraints):
+        solver.add(*constraints)
+        count = len(constraints)
+        self.constraints += count
+        self.phase_constraints[phase] = self.phase_constraints.get(phase, 0) + count
+
+    def add_routing_options(self, count):
+        self.routing_options += count
+
+    def add_wire_contention_check(self):
+        self.wire_contention_checks += 1
+
+    def finish_build(self):
+        self.build_seconds = time.perf_counter() - self._started_at
+
+    def record_result(self, result, solver, check_seconds):
+        self.result = str(result).upper()
+        self.check_seconds = check_seconds
+        wanted = {
+            "decisions",
+            "conflicts",
+            "propagations",
+            "binary propagations",
+            "mk bool var",
+            "arith conflicts",
+            "arith pivots",
+        }
+        stats = {}
+        try:
+            solver_stats = solver.statistics()
+            for key in solver_stats.keys():
+                if key in wanted:
+                    stats[key] = solver_stats.get_key_value(key)
+        except Exception:
+            stats = {}
+        self.z3_stats = stats
+
+    def snapshot(self):
+        return {
+            "T": self.T,
+            "variables": self.variables,
+            "constraints": self.constraints,
+            "phase_constraints": dict(self.phase_constraints),
+            "routing_options": self.routing_options,
+            "hop_variables": self.hop_variables,
+            "edge_users": self.edge_users,
+            "wire_contention_checks": self.wire_contention_checks,
+            "result": self.result,
+            "build_seconds": self.build_seconds,
+            "check_seconds": self.check_seconds,
+            "z3_stats": dict(self.z3_stats),
+        }
+
+
+def empty_smt_stats(T):
+    return SmtBuildStats(T).snapshot()
+
+
+def format_smt_model_summary(stats):
+    phase_bits = ", ".join(
+        f"{phase}={count}"
+        for phase, count in stats["phase_constraints"].items()
+    )
+    parts = [
+        f"vars={stats['variables']}",
+        f"constraints={stats['constraints']}",
+        f"routing_options={stats['routing_options']}",
+        f"hop_vars={stats['hop_variables']}",
+        f"wire_checks={stats['wire_contention_checks']}",
+    ]
+    if phase_bits:
+        parts.append(f"phases: {phase_bits}")
+    return "[SMT] Model summary | " + " | ".join(parts)
+
+
+def format_smt_check_stats(stats, include_optimization=False):
+    z3_bits = ", ".join(
+        f"{key}={value}"
+        for key, value in stats.get("z3_stats", {}).items()
+    )
+    parts = [
+        f"T={stats['T']}",
+        f"result={stats.get('result') or 'SKIPPED'}",
+        f"build={stats['build_seconds']:.2f}s",
+        f"check={stats['check_seconds']:.2f}s",
+    ]
+    if include_optimization:
+        optimization_constraints = stats["phase_constraints"].get("optimization", 0)
+        parts.append(f"optimization_constraints={optimization_constraints}")
+    if z3_bits:
+        parts.append(f"z3: {z3_bits}")
+    return "[SMT] " + " | ".join(parts)
 
 
 def normalized_processing_times(job):
@@ -124,7 +243,7 @@ def job_duration_on_node(job, real_node):
 
 
 def worker_try_T(T):
-    return try_T(T)
+    return try_T(T, collect_stats=SMT_LOG_ENABLED)
 
 
 def normalize_optimization_options(raw_options):
@@ -267,10 +386,28 @@ def build_routing_options(sender_job, receiver_job):
     return routing_options
 
 
-def build_and_solve(T, optimization_options=None):
+def build_and_solve(T, optimization_options=None, collect_stats=False):
     optimization_options = optimization_options or []
 
     solver = Optimize() if optimization_options else Solver()
+    stats = SmtBuildStats(T, optimization_options) if collect_stats else None
+
+    def add_constraints(phase, *constraints):
+        if stats:
+            stats.add_constraints(solver, phase, *constraints)
+        else:
+            solver.add(*constraints)
+
+    def finish(feasible, model=None):
+        if stats:
+            return feasible, model, stats.snapshot()
+        return feasible, model
+
+    def finish_before_check(result="SKIPPED"):
+        if stats:
+            stats.finish_build()
+            stats.result = result
+        return finish(False, None)
 
     # ============================================================
     # JOB VARIABLES
@@ -278,6 +415,8 @@ def build_and_solve(T, optimization_options=None):
 
     job_assigned_es = [Int(f"job_{i}_endsystem") for i in range(num_jobs)]
     job_start_time = [Int(f"job_{i}_start") for i in range(num_jobs)]
+    if stats:
+        stats.add_variables(len(job_assigned_es) + len(job_start_time))
     job_duration_exprs = [
         job_duration_expr(i, job_assigned_es[i])
         for i in range(num_jobs)
@@ -290,6 +429,10 @@ def build_and_solve(T, optimization_options=None):
     msg_inject_time = [Int(f"msg_{mid}_inject") for mid in range(num_msgs)]
     msg_arrival_time = [Int(f"msg_{mid}_arrival") for mid in range(num_msgs)]
     msg_path_choice = [Int(f"msg_{mid}_path_choice") for mid in range(num_msgs)]
+    if stats:
+        stats.add_variables(
+            len(msg_inject_time) + len(msg_arrival_time) + len(msg_path_choice)
+        )
 
     hop_times = {}
 
@@ -299,11 +442,11 @@ def build_and_solve(T, optimization_options=None):
 
     for i, job in enumerate(jobs_data):
         allowed = [es_real_to_esidx[rid] for rid in job["can_run_on"] if rid in es_real_to_esidx]
-        if not allowed: return False, None
-        solver.add(Or([job_assigned_es[i] == x for x in allowed]))
+        if not allowed: return finish_before_check("NO_ALLOWED_NODE")
+        add_constraints("job-domain", Or([job_assigned_es[i] == x for x in allowed]))
         duration = job_duration_exprs[i]
-        solver.add(job_start_time[i] >= 0)
-        solver.add(job_start_time[i] + duration <= T)
+        add_constraints("job-domain", job_start_time[i] >= 0)
+        add_constraints("job-domain", job_start_time[i] + duration <= T)
 
     # ============================================================
     # CPU MUTUAL EXCLUSION
@@ -313,7 +456,8 @@ def build_and_solve(T, optimization_options=None):
         for j in range(i + 1, num_jobs):
             duration_i = job_duration_exprs[i]
             duration_j = job_duration_exprs[j]
-            solver.add(
+            add_constraints(
+                "cpu-mutual-exclusion",
                 Implies(
                     job_assigned_es[i] == job_assigned_es[j],
                     Or(
@@ -336,14 +480,16 @@ def build_and_solve(T, optimization_options=None):
         sender_duration = job_duration_exprs[sender_job]
 
         routing_options = build_routing_options(sender_job, receiver_job)
-        if not routing_options: return False, None
+        if stats:
+            stats.add_routing_options(len(routing_options))
+        if not routing_options: return finish_before_check("NO_ROUTE")
 
-        solver.add(Or([msg_path_choice[mid] == rid for (rid, _, _, _) in routing_options]))
+        add_constraints("message-routing", Or([msg_path_choice[mid] == rid for (rid, _, _, _) in routing_options]))
 
-        solver.add(msg_inject_time[mid] >= job_start_time[sender_job] + sender_duration)
-        solver.add(msg_inject_time[mid] < T)
-        solver.add(msg_arrival_time[mid] >= msg_inject_time[mid])
-        solver.add(msg_arrival_time[mid] < T)
+        add_constraints("message-routing", msg_inject_time[mid] >= job_start_time[sender_job] + sender_duration)
+        add_constraints("message-routing", msg_inject_time[mid] < T)
+        add_constraints("message-routing", msg_arrival_time[mid] >= msg_inject_time[mid])
+        add_constraints("message-routing", msg_arrival_time[mid] < T)
 
         routing_cases = []
         for (rid, src_es_idx, dst_es_idx, path_nodes) in routing_options:
@@ -357,7 +503,9 @@ def build_and_solve(T, optimization_options=None):
             for hop in range(num_hops):
                 hvar = Int(f"msg_{mid}_hop_{rid}_{hop}")
                 local_hop_times.append(hvar)
-                solver.add(hvar >= 0, hvar < T)
+                if stats:
+                    stats.add_variables(1, label="hop")
+                add_constraints("message-routing", hvar >= 0, hvar < T)
             hop_times[(mid, rid)] = local_hop_times
 
             if num_hops > 0: conds.append(local_hop_times[0] == msg_inject_time[mid])
@@ -374,11 +522,14 @@ def build_and_solve(T, optimization_options=None):
                 if edge not in edge_usage: edge_usage[edge] = []
                 edge_usage[edge].append((mid, rid, local_hop_times[h]))
             routing_cases.append(And(conds))
-        solver.add(Or(routing_cases))
+        add_constraints("message-routing", Or(routing_cases))
 
     # ============================================================
     # WIRE CONTENTION
     # ============================================================
+
+    if stats:
+        stats.edge_users = sum(len(users) for users in edge_usage.values())
 
     for key, users in edge_usage.items():
         for i in range(len(users)):
@@ -386,7 +537,18 @@ def build_and_solve(T, optimization_options=None):
             for j in range(i + 1, len(users)):
                 mid_j, rid_j, hop_time_j = users[j]   
                 if mid_i == mid_j: continue
-                solver.add(Implies(And(msg_path_choice[mid_i] == rid_i, msg_path_choice[mid_j] == rid_j), hop_time_i != hop_time_j))
+                if stats:
+                    stats.add_wire_contention_check()
+                add_constraints(
+                    "wire-contention",
+                    Implies(
+                        And(
+                            msg_path_choice[mid_i] == rid_i,
+                            msg_path_choice[mid_j] == rid_j
+                        ),
+                        hop_time_i != hop_time_j
+                    )
+                )
 
     if optimization_options:
         job_finish_exprs = [job_start_time[i] + job_duration_exprs[i] for i in range(num_jobs)]
@@ -394,25 +556,53 @@ def build_and_solve(T, optimization_options=None):
         for option in optimization_options:
             if option == "makespan":
                 schedule_makespan = Int("optimized_schedule_makespan")
-                solver.add(schedule_makespan >= 0, schedule_makespan <= T)
-                for f in job_finish_exprs: solver.add(schedule_makespan >= f)
-                for a in msg_arrival_time: solver.add(schedule_makespan >= a)
+                if stats:
+                    stats.add_variables(1)
+                add_constraints("optimization", schedule_makespan >= 0, schedule_makespan <= T)
+                for f in job_finish_exprs: add_constraints("optimization", schedule_makespan >= f)
+                for a in msg_arrival_time: add_constraints("optimization", schedule_makespan >= a)
                 solver.minimize(schedule_makespan)
             elif option == "resource-usage": solver.minimize(Sum(job_duration_exprs))
             elif option == "message-wait": solver.minimize(Sum(message_wait_terms) if message_wait_terms else 0)
             elif option == "low-latency": solver.minimize(Sum(message_latency_terms) if message_latency_terms else 0)
             elif option == "job-start": solver.minimize(Sum(job_start_time) if job_start_time else 0)
 
+    if stats:
+        stats.finish_build()
+
+        if SMT_LOG_ENABLED:
+            print(
+                format_smt_model_summary(stats.snapshot()),
+                flush=True
+            )
+
+    print(f"Checking T = {T} for feasibility...", flush=True)
+
+    check_started_at = time.perf_counter()
     result = solver.check()
-    if result != sat: return False, None
-    return True, solver.model()
+    check_seconds = time.perf_counter() - check_started_at
+    if stats:
+        stats.record_result(result, solver, check_seconds)
+    if result != sat: return finish(False, None)
+    return finish(True, solver.model())
 
 
-def try_T(T, optimization_options=None):
+def try_T(T, optimization_options=None, collect_stats=False):
 
-    feasible, model = build_and_solve(T, optimization_options)
+    build_result = build_and_solve(
+        T,
+        optimization_options,
+        collect_stats=collect_stats
+    )
+    if collect_stats:
+        feasible, model, stats = build_result
+    else:
+        feasible, model = build_result
+        stats = None
 
     if not feasible:
+        if collect_stats:
+            return T, False, None, stats
         return T, False, None
 
     # ============================================================
@@ -491,6 +681,8 @@ def try_T(T, optimization_options=None):
                 break
 
         if chosen_path_nodes is None:
+            if collect_stats:
+                return T, False, None, stats
             return T, False, None
 
         hop_schedule = []
@@ -555,6 +747,8 @@ def try_T(T, optimization_options=None):
         "messages": msg_details,
     }
 
+    if collect_stats:
+        return T, True, schedule, stats
     return T, True, schedule
 
 # ── CRITICAL: all execution must be inside this guard on Windows ──
@@ -586,12 +780,25 @@ if __name__ == "__main__":
         default=1,
         help="Number of parallel workers for makespan search."
     )
+    parser.add_argument(
+        "--log",
+        action="store_true",
+        help="Show compact SMT build/check progress for each tested time horizon."
+    )
     args = parser.parse_args()
     optimization_options = normalize_optimization_options(args.optimize)
     scheduler_started_at = time.perf_counter()
 
     input_file = args.input_file
-    configure_runtime(input_file)
+    configure_runtime(input_file, log_enabled=args.log)
+
+    if args.log:
+        print(
+            "[SMT] Input summary | "
+            f"jobs={num_jobs}, messages={num_msgs}, end_systems={num_endsystems}, "
+            f"switches={num_switches}, deadline={app_deadline}, workers={args.workers}",
+            flush=True
+        )
 
     l_min = compute_lmin(jobs_data, messages_data)
     t_max = app_deadline
@@ -603,13 +810,17 @@ if __name__ == "__main__":
     best_schedule = None
     optimal_T     = None
     NUM_WORKERS   = args.workers
+    search_iteration = 0
+    checked_horizons = 0
+    model_summary_printed = False
 
     with ProcessPoolExecutor(
         max_workers=NUM_WORKERS,
         initializer=configure_runtime,
-        initargs=(input_file,),
+        initargs=(input_file, args.log),
     ) as executor:
         while low <= high:
+            search_iteration += 1
             mid = (low + high) // 2
 
             # build a contiguous candidate block centered near mid
@@ -619,21 +830,41 @@ if __name__ == "__main__":
 
             candidates = list(range(a, b + 1))
             t_label = f"T = {candidates[0]}" if len(candidates) == 1 else f"T = {candidates}"
+            if args.log:
+                print(
+                    "[SMT] Search step "
+                    f"{search_iteration} | remaining_T_range={low}..{high}, "
+                    f"candidates={candidates}, tested_so_far={checked_horizons}",
+                    flush=True
+                )
             print(f"Checking {t_label} for feasibility...", flush=True)
 
             step_started_at = time.perf_counter()
             results = list(executor.map(worker_try_T, candidates))
             step_seconds = time.perf_counter() - step_started_at
+            checked_horizons += len(candidates)
+            if args.log:
+                for _, _, _, stats in results:
+                    if not model_summary_printed:
+                        print(format_smt_model_summary(stats), flush=True)
+                        model_summary_printed = True
+                    print(format_smt_check_stats(stats), flush=True)
+                result_rows = results
+            else:
+                result_rows = [
+                    (t, feasible, sched, None)
+                    for (t, feasible, sched) in results
+                ]
 
             # collect SAT results
-            sat_ts = [t for (t, feasible, sched) in results if feasible]
+            sat_ts = [t for (t, feasible, sched, _) in result_rows if feasible]
 
             if sat_ts:
                 t_sat = min(sat_ts)
                 print(f"Feasible schedule found at T = {t_sat} (took {step_seconds:.2f}s to finish)", flush=True)
 
                 # store schedule for smallest SAT found
-                for (t, feasible, sched) in results:
+                for (t, feasible, sched, _) in result_rows:
                     if t == t_sat and feasible:
                         optimal_T = t_sat
                         best_schedule = sched
@@ -655,10 +886,23 @@ if __name__ == "__main__":
             final_optimization_options.insert(0, "makespan")
 
         if final_optimization_options:
-            _, optimized, optimized_schedule = try_T(
+            optimization_result = try_T(
                 optimal_T,
                 optimization_options=final_optimization_options,
+                collect_stats=args.log,
             )
+            if args.log:
+                _, optimized, optimized_schedule, optimization_stats = optimization_result
+                print(
+                    "[SMT] Final optimization pass | "
+                    + format_smt_check_stats(
+                        optimization_stats,
+                        include_optimization=True
+                    ).replace("[SMT] ", "", 1),
+                    flush=True
+                )
+            else:
+                _, optimized, optimized_schedule = optimization_result
             if optimized:
                 best_schedule = optimized_schedule
             scheduler_seconds = time.perf_counter() - scheduler_started_at
