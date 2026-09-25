@@ -1,5 +1,5 @@
 import argparse
-from concurrent.futures import ProcessPoolExecutor
+import concurrent.futures as _concurrent_futures
 import json
 import math
 import shutil
@@ -209,22 +209,18 @@ def format_smt_check_stats(stats, include_optimization=False):
 
 def normalized_processing_times(job):
     allowed_nodes = job["can_run_on"]
-    processing_times = job.get("processing_times")
-
-    if isinstance(processing_times, list) and len(processing_times) == len(allowed_nodes):
-        return [math.ceil(value) for value in processing_times]
+    wcet = job["wcet_fullspeed"]
     
-
-    # return [
-    #     math.ceil(job["wcet_fullspeed"] * node_speed_factors.get(node_id, 1))
-    #     for node_id in allowed_nodes
-    # ]
-
-
+    # Dynamically compute math.ceil(wcet_fullspeed * speed_factor) per allowed node
+    return [
+        math.ceil(wcet * node_speed_factors.get(node_id, 1))
+        for node_id in allowed_nodes
+    ]
 def job_duration_options(job):
+    proc_times = normalized_processing_times(job)
     return {
         es_real_to_esidx[node_id]: duration
-        for node_id, duration in zip(job["can_run_on"], job["processing_times"])
+        for node_id, duration in zip(job["can_run_on"], proc_times)
         if node_id in es_real_to_esidx
     }
 
@@ -246,23 +242,19 @@ def worker_try_T(T):
     return try_T(T, collect_stats=SMT_LOG_ENABLED)
 
 
+def initialize_worker(input_path, log_enabled):
+    """Load scheduler state in every spawned process-pool worker."""
+    configure_runtime(input_path, log_enabled=log_enabled)
+
+
 def normalize_optimization_options(raw_options):
     aliases = {
         "makespan": "makespan",
         "resource": "resource-usage",
-        "resources": "resource-usage",
-        "resource-usage": "resource-usage",
-        "resource_usage": "resource-usage",
         "message-wait": "message-wait",
-        "message_wait": "message-wait",
-        "less-message-waiting": "message-wait",
-        "low-latency": "low-latency",
-        "low_latency": "low-latency",
         "latency": "low-latency",
         "job-start": "job-start",
-        "job_start": "job-start",
-        "job-start-time": "job-start",
-        "job_start_time": "job-start",
+
     }
     normalized = []
     for option in raw_options or []:
@@ -814,9 +806,9 @@ if __name__ == "__main__":
     checked_horizons = 0
     model_summary_printed = False
 
-    with ProcessPoolExecutor(
+    with _concurrent_futures.ProcessPoolExecutor(
         max_workers=NUM_WORKERS,
-        initializer=configure_runtime,
+        initializer=initialize_worker,
         initargs=(input_file, args.log),
     ) as executor:
         while low <= high:
