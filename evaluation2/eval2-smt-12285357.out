@@ -1,0 +1,82 @@
+[EVAL2] Python: Python 3.14.3
+[EVAL2] case=75T_95M input=evaluation2/iteration1/input/75T_95M.json iteration=iteration1 job_id=12285357
+[SMT] Input summary | jobs=75, messages=95, end_systems=94, switches=101, deadline=2310, workers=1
+[SMT] Search step 1 | remaining_T_range=692..2310, candidates=[1501], tested_so_far=0
+Checking T = 1501 for feasibility...
+[SMT] Model summary | vars=1951 | constraints=12890 | routing_options=381 | hop_vars=1516 | wire_checks=6288 | phases: job-domain=225, cpu-mutual-exclusion=2775, message-routing=3602, wire-contention=6288
+Checking T = 1501 for feasibility...
+[SMT] Model summary | vars=1951 | constraints=12890 | routing_options=381 | hop_vars=1516 | wire_checks=6288 | phases: job-domain=225, cpu-mutual-exclusion=2775, message-routing=3602, wire-contention=6288
+[SMT] T=1501 | result=SAT | build=2.88s | check=17.63s | z3: conflicts=368, decisions=252305, propagations=235033, binary propagations=228211, mk bool var=30582
+Feasible schedule found at T = 1501 (took 20.65s to finish)
+[SMT] Search step 2 | remaining_T_range=692..1500, candidates=[1096], tested_so_far=1
+Checking T = 1096 for feasibility...
+[SMT] Model summary | vars=1951 | constraints=12890 | routing_options=381 | hop_vars=1516 | wire_checks=6288 | phases: job-domain=225, cpu-mutual-exclusion=2775, message-routing=3602, wire-contention=6288
+Checking T = 1096 for feasibility...
+[SMT] T=1096 | result=SAT | build=2.85s | check=45.92s | z3: conflicts=1285, decisions=656141, propagations=610415, binary propagations=573576, mk bool var=30582
+Feasible schedule found at T = 1096 (took 48.87s to finish)
+[SMT] Search step 3 | remaining_T_range=692..1095, candidates=[893], tested_so_far=2
+Checking T = 893 for feasibility...
+[SMT] Model summary | vars=1951 | constraints=12890 | routing_options=381 | hop_vars=1516 | wire_checks=6288 | phases: job-domain=225, cpu-mutual-exclusion=2775, message-routing=3602, wire-contention=6288
+Checking T = 893 for feasibility...
+[SMT] T=893 | result=SAT | build=2.85s | check=49.65s | z3: conflicts=1330, decisions=497643, propagations=537046, binary propagations=499637, mk bool var=30582
+Feasible schedule found at T = 893 (took 52.59s to finish)
+[SMT] Search step 4 | remaining_T_range=692..892, candidates=[792], tested_so_far=3
+Checking T = 792 for feasibility...
+[SMT] Model summary | vars=1951 | constraints=12890 | routing_options=381 | hop_vars=1516 | wire_checks=6288 | phases: job-domain=225, cpu-mutual-exclusion=2775, message-routing=3602, wire-contention=6288
+Checking T = 792 for feasibility...
+[SMT] T=792 | result=SAT | build=2.84s | check=83.07s | z3: conflicts=2232, decisions=950581, propagations=1024904, binary propagations=954794, mk bool var=30582
+Feasible schedule found at T = 792 (took 86.02s to finish)
+[SMT] Search step 5 | remaining_T_range=692..791, candidates=[741], tested_so_far=4
+Checking T = 741 for feasibility...
+[SMT] Model summary | vars=1951 | constraints=12890 | routing_options=381 | hop_vars=1516 | wire_checks=6288 | phases: job-domain=225, cpu-mutual-exclusion=2775, message-routing=3602, wire-contention=6288
+Checking T = 741 for feasibility...
+[SMT] T=741 | result=SAT | build=2.88s | check=48.87s | z3: conflicts=1370, decisions=503527, propagations=519605, binary propagations=487688, mk bool var=30582
+Feasible schedule found at T = 741 (took 51.85s to finish)
+[SMT] Search step 6 | remaining_T_range=692..740, candidates=[716], tested_so_far=5
+Checking T = 716 for feasibility...
+[SMT] Model summary | vars=1951 | constraints=12890 | routing_options=381 | hop_vars=1516 | wire_checks=6288 | phases: job-domain=225, cpu-mutual-exclusion=2775, message-routing=3602, wire-contention=6288
+Checking T = 716 for feasibility...
+[SMT] T=716 | result=UNSAT | build=2.88s | check=5.56s | z3: conflicts=366, decisions=22415, propagations=96143, binary propagations=91766, mk bool var=30582
+No feasible schedule for T = 716 (took 8.47s to finish)
+[SMT] Search step 7 | remaining_T_range=717..740, candidates=[728], tested_so_far=6
+Checking T = 728 for feasibility...
+[SMT] Model summary | vars=1951 | constraints=12890 | routing_options=381 | hop_vars=1516 | wire_checks=6288 | phases: job-domain=225, cpu-mutual-exclusion=2775, message-routing=3602, wire-contention=6288
+Checking T = 728 for feasibility...
+[SMT] T=728 | result=SAT | build=2.87s | check=49.96s | z3: conflicts=1393, decisions=513977, propagations=548136, binary propagations=508911, mk bool var=30582
+Feasible schedule found at T = 728 (took 52.94s to finish)
+[SMT] Search step 8 | remaining_T_range=717..727, candidates=[722], tested_so_far=7
+Checking T = 722 for feasibility...
+[SMT] Model summary | vars=1951 | constraints=12890 | routing_options=381 | hop_vars=1516 | wire_checks=6288 | phases: job-domain=225, cpu-mutual-exclusion=2775, message-routing=3602, wire-contention=6288
+Checking T = 722 for feasibility...
+[SMT] T=722 | result=SAT | build=2.89s | check=38.30s | z3: conflicts=1313, decisions=466583, propagations=482615, binary propagations=451909, mk bool var=30582
+Feasible schedule found at T = 722 (took 41.29s to finish)
+[SMT] Search step 9 | remaining_T_range=717..721, candidates=[719], tested_so_far=8
+Checking T = 719 for feasibility...
+[SMT] Model summary | vars=1951 | constraints=12890 | routing_options=381 | hop_vars=1516 | wire_checks=6288 | phases: job-domain=225, cpu-mutual-exclusion=2775, message-routing=3602, wire-contention=6288
+Checking T = 719 for feasibility...
+[SMT] T=719 | result=SAT | build=2.89s | check=44.36s | z3: conflicts=1323, decisions=499240, propagations=516858, binary propagations=482197, mk bool var=30582
+Feasible schedule found at T = 719 (took 47.35s to finish)
+[SMT] Search step 10 | remaining_T_range=717..718, candidates=[717], tested_so_far=9
+Checking T = 717 for feasibility...
+[SMT] Model summary | vars=1951 | constraints=12890 | routing_options=381 | hop_vars=1516 | wire_checks=6288 | phases: job-domain=225, cpu-mutual-exclusion=2775, message-routing=3602, wire-contention=6288
+Checking T = 717 for feasibility...
+[SMT] T=717 | result=UNSAT | build=2.90s | check=3.71s | z3: conflicts=305, decisions=3446, propagations=53660, binary propagations=51428, mk bool var=30582
+No feasible schedule for T = 717 (took 6.63s to finish)
+[SMT] Search step 11 | remaining_T_range=718..718, candidates=[718], tested_so_far=10
+Checking T = 718 for feasibility...
+[SMT] Model summary | vars=1951 | constraints=12890 | routing_options=381 | hop_vars=1516 | wire_checks=6288 | phases: job-domain=225, cpu-mutual-exclusion=2775, message-routing=3602, wire-contention=6288
+Checking T = 718 for feasibility...
+[SMT] T=718 | result=SAT | build=2.88s | check=57.19s | z3: conflicts=1752, decisions=725690, propagations=768274, binary propagations=715143, mk bool var=30582
+Feasible schedule found at T = 718 (took 60.17s to finish)
+Total time: 479.46 seconds
+Final makespan: 718
+Application deadline: 2310
+SAT found: Yes
+Saved file location: evaluation2/iteration1/output/75T_95M_binary_search.json
+[SMT] Model summary | vars=1952 | constraints=13062 | routing_options=381 | hop_vars=1516 | wire_checks=6288 | phases: job-domain=225, cpu-mutual-exclusion=2775, message-routing=3602, wire-contention=6288, optimization=172
+Checking T = 2310 for feasibility...
+[EVAL2] solver=z3_optimize_makespan l_min=692 deadline=2310
+[EVAL2] makespan=718 scheduler_compute_time=2196.293258s
+[EVAL2] SMT stats: {"T": 2310, "build_seconds": 2.8154559560352936, "check_seconds": 2192.373068115092, "constraints": 13062, "edge_users": 1516, "hop_variables": 1516, "phase_constraints": {"cpu-mutual-exclusion": 2775, "job-domain": 225, "message-routing": 3602, "optimization": 172, "wire-contention": 6288}, "result": "SAT", "routing_options": 381, "variables": 1952, "wire_contention_checks": 6288, "z3_stats": {"binary propagations": 42202359, "conflicts": 18152, "decisions": 22014425, "mk bool var": 38300, "propagations": 56684632}}
+[EVAL2] output=evaluation2/iteration1/output/75T_95M_z3_makespan.json
+[EVAL2] case=75T_95M completed

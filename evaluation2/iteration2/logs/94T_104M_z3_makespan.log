@@ -1,0 +1,6 @@
+[SMT] Model summary | vars=2427 | constraints=19934 | routing_options=471 | hop_vars=1926 | wire_checks=10605 | phases: job-domain=282, cpu-mutual-exclusion=4371, message-routing=4476, wire-contention=10605, optimization=200
+Checking T = 3439 for feasibility...
+[EVAL2] solver=z3_optimize_makespan l_min=856 deadline=3439
+[EVAL2] makespan=879 scheduler_compute_time=9635.023524s
+[EVAL2] SMT stats: {"T": 3439, "build_seconds": 4.353202602011152, "check_seconds": 9629.511816516984, "constraints": 19934, "edge_users": 1926, "hop_variables": 1926, "phase_constraints": {"cpu-mutual-exclusion": 4371, "job-domain": 282, "message-routing": 4476, "optimization": 200, "wire-contention": 10605}, "result": "SAT", "routing_options": 471, "variables": 2427, "wire_contention_checks": 10605, "z3_stats": {"binary propagations": 222607957, "conflicts": 70285, "decisions": 89204585, "mk bool var": 60281, "propagations": 317983632}}
+[EVAL2] output=evaluation2/iteration2/output/94T_104M_z3_makespan.json

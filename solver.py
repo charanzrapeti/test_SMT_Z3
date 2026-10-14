@@ -801,16 +801,74 @@ if __name__ == "__main__":
     high = t_max
     best_schedule = None
     optimal_T     = None
+    best_schedule_iteration = None
     NUM_WORKERS   = args.workers
     search_iteration = 0
     checked_horizons = 0
     model_summary_printed = False
 
-    with _concurrent_futures.ProcessPoolExecutor(
-        max_workers=NUM_WORKERS,
-        initializer=initialize_worker,
-        initargs=(input_file, args.log),
-    ) as executor:
+    base_name = Path(input_file).stem
+    output_dir = Path("output")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_file = output_dir / f"{base_name}_smt_output.json"
+    requested_output = Path(args.output_file) if args.output_file else None
+
+    def save_best_schedule(schedule, horizon, iteration, seconds, finalized=False):
+        makespan = schedule_makespan(schedule)
+        deadline_satisfied = makespan < app_deadline
+        absolute_minimum = horizon == l_min
+        output = {
+            "sat": deadline_satisfied,
+            "solver": "binary_search",
+            "l_min": l_min,
+            "optimal_makespan": makespan,
+            "optimal_time_horizon": horizon,
+            "application_deadline": app_deadline,
+            "deadline_satisfied": deadline_satisfied,
+            "absolute_minimum": absolute_minimum,
+            "iteration": None if absolute_minimum else iteration,
+            "search_complete": finalized,
+            "schedule_calculation_seconds": round(seconds, 6),
+            "optimizations": optimization_options,
+            "internal_optimizations": list(optimization_options),
+            "schedule": schedule,
+        }
+
+        def write_json(path):
+            path.parent.mkdir(parents=True, exist_ok=True)
+            temporary_path = path.with_name(path.name + ".tmp")
+            with open(temporary_path, "w") as f:
+                json.dump(output, f, indent=4)
+            temporary_path.replace(path)
+
+        write_json(output_file)
+        if requested_output:
+            write_json(requested_output)
+
+    if NUM_WORKERS == 1:
+        # Avoid ProcessPoolExecutor(initializer=...), which is unavailable in
+        # Python 3.6 on the target Slurm cluster. Runtime is already configured
+        # in this process, so the single-worker path can solve inline.
+        class InlineExecutor:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc_value, traceback):
+                return False
+
+            @staticmethod
+            def map(function, values):
+                return list(map(function, values))
+
+        executor_context = InlineExecutor()
+    else:
+        executor_context = _concurrent_futures.ProcessPoolExecutor(
+            max_workers=NUM_WORKERS,
+            initializer=initialize_worker,
+            initargs=(input_file, args.log),
+        )
+
+    with executor_context as executor:
         while low <= high:
             search_iteration += 1
             mid = (low + high) // 2
@@ -860,6 +918,13 @@ if __name__ == "__main__":
                     if t == t_sat and feasible:
                         optimal_T = t_sat
                         best_schedule = sched
+                        best_schedule_iteration = search_iteration
+                        save_best_schedule(
+                            best_schedule,
+                            optimal_T,
+                            best_schedule_iteration,
+                            time.perf_counter() - scheduler_started_at,
+                        )
                         break
 
                 # narrow search to values < t_sat
@@ -901,37 +966,23 @@ if __name__ == "__main__":
 
         final_makespan = schedule_makespan(best_schedule)
         deadline_satisfied = final_makespan < app_deadline
-
-        output = {
-            "sat": deadline_satisfied,
-            "optimal_makespan": final_makespan,
-            "optimal_time_horizon": optimal_T,
-            "application_deadline": app_deadline,
-            "deadline_satisfied": deadline_satisfied,
-            "schedule_calculation_seconds": round(scheduler_seconds, 6),
-            "optimizations": optimization_options,
-            "internal_optimizations": final_optimization_options,
-            "schedule":         best_schedule,
-        }
-        base_name   = Path(input_file).stem
-        output_dir = Path("output")
-        output_dir.mkdir(parents=True, exist_ok=True)
-        output_file = output_dir / f"{base_name}_smt_output.json"
-        with open(output_file, "w") as f:
-            json.dump(output, f, indent=4)
+        save_best_schedule(
+            best_schedule,
+            optimal_T,
+            best_schedule_iteration,
+            scheduler_seconds,
+            finalized=True,
+        )
 
         if optimization_options:
             optimized_suffix = "_".join(optimization_options).replace("-", "_")
             optimized_output_file = output_dir / f"{base_name}_smt_optimized_{optimized_suffix}.json"
             with open(optimized_output_file, "w") as f:
-                json.dump(output, f, indent=4)
+                json.dump(json.loads(output_file.read_text()), f, indent=4)
 
         scheduled_output_file = str(output_file)
         if args.output_file:
-            out_path = Path(args.output_file)
-            out_path.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(output_file, args.output_file)
-            scheduled_output_file = str(args.output_file)
+            scheduled_output_file = str(requested_output)
 
             if optimization_options:
                 output_path = Path(args.output_file)

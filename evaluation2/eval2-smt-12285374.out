@@ -1,0 +1,82 @@
+[EVAL2] Python: Python 3.14.3
+[EVAL2] case=112T_122M input=evaluation2/iteration2/input/112T_122M.json iteration=iteration2 job_id=12285374
+[SMT] Input summary | jobs=112, messages=122, end_systems=94, switches=101, deadline=3537, workers=1
+[SMT] Search step 1 | remaining_T_range=1045..3537, candidates=[2291], tested_so_far=0
+Checking T = 2291 for feasibility...
+[SMT] Model summary | vars=2768 | constraints=24356 | routing_options=541 | hop_vars=2178 | wire_checks=12716 | phases: job-domain=336, cpu-mutual-exclusion=6216, message-routing=5088, wire-contention=12716
+Checking T = 2291 for feasibility...
+[SMT] Model summary | vars=2768 | constraints=24356 | routing_options=541 | hop_vars=2178 | wire_checks=12716 | phases: job-domain=336, cpu-mutual-exclusion=6216, message-routing=5088, wire-contention=12716
+[SMT] T=2291 | result=SAT | build=5.55s | check=632.79s | z3: conflicts=3386, decisions=4796354, propagations=3513168, binary propagations=3347545, mk bool var=58868
+Feasible schedule found at T = 2291 (took 638.54s to finish)
+[SMT] Search step 2 | remaining_T_range=1045..2290, candidates=[1667], tested_so_far=1
+Checking T = 1667 for feasibility...
+[SMT] Model summary | vars=2768 | constraints=24356 | routing_options=541 | hop_vars=2178 | wire_checks=12716 | phases: job-domain=336, cpu-mutual-exclusion=6216, message-routing=5088, wire-contention=12716
+Checking T = 1667 for feasibility...
+[SMT] T=1667 | result=SAT | build=5.60s | check=1131.93s | z3: conflicts=12891, decisions=4935079, propagations=6813548, binary propagations=6405373, mk bool var=58868
+Feasible schedule found at T = 1667 (took 1137.70s to finish)
+[SMT] Search step 3 | remaining_T_range=1045..1666, candidates=[1355], tested_so_far=2
+Checking T = 1355 for feasibility...
+[SMT] Model summary | vars=2768 | constraints=24356 | routing_options=541 | hop_vars=2178 | wire_checks=12716 | phases: job-domain=336, cpu-mutual-exclusion=6216, message-routing=5088, wire-contention=12716
+Checking T = 1355 for feasibility...
+[SMT] T=1355 | result=SAT | build=5.59s | check=707.55s | z3: conflicts=5849, decisions=5298388, propagations=4824063, binary propagations=4510955, mk bool var=58868
+Feasible schedule found at T = 1355 (took 713.30s to finish)
+[SMT] Search step 4 | remaining_T_range=1045..1354, candidates=[1199], tested_so_far=3
+Checking T = 1199 for feasibility...
+[SMT] Model summary | vars=2768 | constraints=24356 | routing_options=541 | hop_vars=2178 | wire_checks=12716 | phases: job-domain=336, cpu-mutual-exclusion=6216, message-routing=5088, wire-contention=12716
+Checking T = 1199 for feasibility...
+[SMT] T=1199 | result=SAT | build=5.58s | check=455.45s | z3: conflicts=4332, decisions=4070578, propagations=3848578, binary propagations=3587457, mk bool var=58868
+Feasible schedule found at T = 1199 (took 461.19s to finish)
+[SMT] Search step 5 | remaining_T_range=1045..1198, candidates=[1121], tested_so_far=4
+Checking T = 1121 for feasibility...
+[SMT] Model summary | vars=2768 | constraints=24356 | routing_options=541 | hop_vars=2178 | wire_checks=12716 | phases: job-domain=336, cpu-mutual-exclusion=6216, message-routing=5088, wire-contention=12716
+Checking T = 1121 for feasibility...
+[SMT] T=1121 | result=SAT | build=5.61s | check=397.03s | z3: conflicts=4360, decisions=3270800, propagations=3304776, binary propagations=3097630, mk bool var=58868
+Feasible schedule found at T = 1121 (took 402.80s to finish)
+[SMT] Search step 6 | remaining_T_range=1045..1120, candidates=[1082], tested_so_far=5
+Checking T = 1082 for feasibility...
+[SMT] Model summary | vars=2768 | constraints=24356 | routing_options=541 | hop_vars=2178 | wire_checks=12716 | phases: job-domain=336, cpu-mutual-exclusion=6216, message-routing=5088, wire-contention=12716
+Checking T = 1082 for feasibility...
+[SMT] T=1082 | result=SAT | build=5.55s | check=353.67s | z3: conflicts=3866, decisions=3022071, propagations=2971224, binary propagations=2771957, mk bool var=58868
+Feasible schedule found at T = 1082 (took 359.38s to finish)
+[SMT] Search step 7 | remaining_T_range=1045..1081, candidates=[1063], tested_so_far=6
+Checking T = 1063 for feasibility...
+[SMT] Model summary | vars=2768 | constraints=24356 | routing_options=541 | hop_vars=2178 | wire_checks=12716 | phases: job-domain=336, cpu-mutual-exclusion=6216, message-routing=5088, wire-contention=12716
+Checking T = 1063 for feasibility...
+[SMT] T=1063 | result=UNSAT | build=5.55s | check=8.46s | z3: conflicts=261, decisions=11398, propagations=94254, binary propagations=91026, mk bool var=58868
+No feasible schedule for T = 1063 (took 14.05s to finish)
+[SMT] Search step 8 | remaining_T_range=1064..1081, candidates=[1072], tested_so_far=7
+Checking T = 1072 for feasibility...
+[SMT] Model summary | vars=2768 | constraints=24356 | routing_options=541 | hop_vars=2178 | wire_checks=12716 | phases: job-domain=336, cpu-mutual-exclusion=6216, message-routing=5088, wire-contention=12716
+Checking T = 1072 for feasibility...
+[SMT] T=1072 | result=UNSAT | build=5.52s | check=19.57s | z3: conflicts=662, decisions=20462, propagations=188630, binary propagations=181553, mk bool var=58868
+No feasible schedule for T = 1072 (took 25.12s to finish)
+[SMT] Search step 9 | remaining_T_range=1073..1081, candidates=[1077], tested_so_far=8
+Checking T = 1077 for feasibility...
+[SMT] Model summary | vars=2768 | constraints=24356 | routing_options=541 | hop_vars=2178 | wire_checks=12716 | phases: job-domain=336, cpu-mutual-exclusion=6216, message-routing=5088, wire-contention=12716
+Checking T = 1077 for feasibility...
+[SMT] T=1077 | result=UNSAT | build=5.54s | check=17.39s | z3: conflicts=548, decisions=18746, propagations=182078, binary propagations=174792, mk bool var=58868
+No feasible schedule for T = 1077 (took 22.97s to finish)
+[SMT] Search step 10 | remaining_T_range=1078..1081, candidates=[1079], tested_so_far=9
+Checking T = 1079 for feasibility...
+[SMT] Model summary | vars=2768 | constraints=24356 | routing_options=541 | hop_vars=2178 | wire_checks=12716 | phases: job-domain=336, cpu-mutual-exclusion=6216, message-routing=5088, wire-contention=12716
+Checking T = 1079 for feasibility...
+[SMT] T=1079 | result=UNSAT | build=5.54s | check=36.01s | z3: conflicts=893, decisions=71755, propagations=319422, binary propagations=305843, mk bool var=58868
+No feasible schedule for T = 1079 (took 41.59s to finish)
+[SMT] Search step 11 | remaining_T_range=1080..1081, candidates=[1080], tested_so_far=10
+Checking T = 1080 for feasibility...
+[SMT] Model summary | vars=2768 | constraints=24356 | routing_options=541 | hop_vars=2178 | wire_checks=12716 | phases: job-domain=336, cpu-mutual-exclusion=6216, message-routing=5088, wire-contention=12716
+Checking T = 1080 for feasibility...
+[SMT] T=1080 | result=SAT | build=5.52s | check=336.45s | z3: conflicts=3894, decisions=3307606, propagations=3157120, binary propagations=2932269, mk bool var=58868
+Feasible schedule found at T = 1080 (took 342.13s to finish)
+Total time: 4160.21 seconds
+Final makespan: 1080
+Application deadline: 3537
+SAT found: Yes
+Saved file location: evaluation2/iteration2/output/112T_122M_binary_search.json
+[SMT] Model summary | vars=2769 | constraints=24592 | routing_options=541 | hop_vars=2178 | wire_checks=12716 | phases: job-domain=336, cpu-mutual-exclusion=6216, message-routing=5088, wire-contention=12716, optimization=236
+Checking T = 3537 for feasibility...
+[EVAL2] solver=z3_optimize_makespan l_min=1045 deadline=3537
+[EVAL2] makespan=1080 scheduler_compute_time=31545.630531s
+[EVAL2] SMT stats: {"T": 3537, "build_seconds": 5.424806940020062, "check_seconds": 31539.021619990002, "constraints": 24592, "edge_users": 2178, "hop_variables": 2178, "phase_constraints": {"cpu-mutual-exclusion": 6216, "job-domain": 336, "message-routing": 5088, "optimization": 236, "wire-contention": 12716}, "result": "SAT", "routing_options": 541, "variables": 2769, "wire_contention_checks": 12716, "z3_stats": {"binary propagations": 466034382, "conflicts": 127415, "decisions": 156783668, "mk bool var": 73804, "propagations": 701954433}}
+[EVAL2] output=evaluation2/iteration2/output/112T_122M_z3_makespan.json
+[EVAL2] case=112T_122M completed

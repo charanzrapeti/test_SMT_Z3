@@ -1,0 +1,6 @@
+[EVAL2] case=100T_110M input=evaluation2/iteration2/input/100T_110M.json iteration=iteration2 job_id=12285277
+[SMT] Input summary | jobs=100, messages=110, end_systems=94, switches=101, deadline=4841, workers=1
+Traceback (most recent call last):
+  File "solver.py", line 849, in <module>
+    initargs=(input_file, args.log),
+TypeError: __init__() got an unexpected keyword argument 'initializer'

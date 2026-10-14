@@ -7,7 +7,7 @@
 #SBATCH --job-name=smt-scheduler
 #SBATCH --account=uni-siegen
 #SBATCH --partition=long
-#SBATCH --time=5-00:00:00
+#SBATCH --time=15-00:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
