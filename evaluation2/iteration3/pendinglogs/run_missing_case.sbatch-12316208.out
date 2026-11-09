@@ -1,0 +1,8 @@
+[EVAL2] case=152T_152M solver=z3_makespan input=evaluation2/iteration3/input/152T_152M.json job_id=12316208
+[SMT] Model summary | vars=3575 | constraints=39371 | routing_options=688 | hop_vars=2814 | wire_checks=20593 | phases: job-domain=456, cpu-mutual-exclusion=11476, message-routing=6540, wire-contention=20593, optimization=306
+Checking T = 6324 for feasibility...
+[EVAL2] solver=z3_optimize_makespan l_min=1224 deadline=6324
+[EVAL2] makespan=1253 scheduler_compute_time=514892.245015s
+[EVAL2] SMT stats: {"T": 6324, "build_seconds": 8.50683664297685, "check_seconds": 514878.6354425261, "constraints": 39371, "edge_users": 2814, "hop_variables": 2814, "phase_constraints": {"cpu-mutual-exclusion": 11476, "job-domain": 456, "message-routing": 6540, "optimization": 306, "wire-contention": 20593}, "result": "SAT", "routing_options": 688, "variables": 3575, "wire_contention_checks": 20593, "z3_stats": {"binary propagations": 2334564721, "conflicts": 2061402, "decisions": 3305927741, "mk bool var": 113371, "propagations": 1888333223}}
+[EVAL2] output=evaluation2/iteration3/output/152T_152M_z3_makespan.json
+[EVAL2] case=152T_152M solver=z3_makespan completed

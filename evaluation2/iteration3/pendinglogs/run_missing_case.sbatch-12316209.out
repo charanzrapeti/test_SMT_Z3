@@ -1,0 +1,8 @@
+[EVAL2] case=160T_170M solver=z3_makespan input=evaluation2/iteration3/input/160T_170M.json job_id=12316209
+[SMT] Model summary | vars=3808 | constraints=42859 | routing_options=742 | hop_vars=2977 | wire_checks=22353 | phases: job-domain=480, cpu-mutual-exclusion=12720, message-routing=6974, wire-contention=22353, optimization=332
+Checking T = 6786 for feasibility...
+[EVAL2] solver=z3_optimize_makespan l_min=1170 deadline=6786
+[EVAL2] makespan=1197 scheduler_compute_time=1012707.228074s
+[EVAL2] SMT stats: {"T": 6786, "build_seconds": 8.979309290880337, "check_seconds": 1012695.9294651821, "constraints": 42859, "edge_users": 2977, "hop_variables": 2977, "phase_constraints": {"cpu-mutual-exclusion": 12720, "job-domain": 480, "message-routing": 6974, "optimization": 332, "wire-contention": 22353}, "result": "SAT", "routing_options": 742, "variables": 3808, "wire_contention_checks": 22353, "z3_stats": {"binary propagations": 329840982, "conflicts": 4247386, "decisions": 2580760945, "mk bool var": 125069, "propagations": 173336385}}
+[EVAL2] output=evaluation2/iteration3/output/160T_170M_z3_makespan.json
+[EVAL2] case=160T_170M solver=z3_makespan completed
